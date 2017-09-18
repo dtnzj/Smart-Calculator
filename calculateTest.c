@@ -2,6 +2,7 @@
 #include <string.h>  
 #include <stdlib.h>
 #include <math.h>
+#include <ctype.h>
 
 int isFunction(char* op);
 int isSymFunction(char op);
@@ -46,27 +47,18 @@ int isOperator(char op)                //判断输入串中的字符是不是操
     return (op=='+' || op=='-' || op=='*' || op=='/' || op=='^' || op=='~');  
 }  
 
-// char funName[][7]={ "sqrt",     //1 A
-//                     "sin",      //2 B
-//                     "cos",      //3 C
-//                     "tg",       //4 D
-//                     "ctg",      //5 F
-//                     "arcsin",   //6 G
-//                     "arccos",   //7 H
-//                     "arctg",    //8 I
-//                     "ln",       //9 J
-//                     "floor",    //10 K
-//                     "ceil"      //11 L
-//                 };
 typedef struct
 {
     char name[7];
     char sym;
 } funName2Sym;
-funName2Sym funName[11] = { "sin",      'A',    //1
+#define FUNMAX 13
+funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
                             "cos",      'B',    //2
                             "tg",       'C',    //3
+                            "tan",       'C',    //3
                             "ctg",      'D',    //4
+                            "ctan",      'D',    //4
                             "arcsin",   'F',    //5
                             "arccos",   'G',    //6
                             "arctg",    'H',    //7
@@ -78,7 +70,7 @@ funName2Sym funName[11] = { "sin",      'A',    //1
                 
 int isFunction(char* op)
 {
-    for(int i=0; i<11;i++)
+    for(int i=0; i<FUNMAX;i++)
         if( op == strstr(op,funName[i].name))
             return i+1;
     return 0;
@@ -86,12 +78,44 @@ int isFunction(char* op)
 
 int isSymFunction(char op)
 {
-    for(int i=0; i<11;i++)
+    for(int i=0; i<FUNMAX;i++)
         if( op == funName[i].sym)
             return i+1;
     return 0;
 }
 
+
+char *strlwr(char *str)
+{
+    char *orign =str;
+    for (; *str!='\0'; str++,orign++)
+        *orign = tolower(*str);
+    return orign;
+}
+// 将字符串中的数学函数转换为对应的字母代号
+void fun2sym(char *expr)
+{
+    int tmp ;
+    int i;
+    strlwr(expr);  // 将字符串中所有字母转换为小写字母
+    while (*expr)
+    {
+        tmp = isFunction(expr)-1;
+        // 这个写法有点儿逆天，但是暂时没找到更好的优化方案
+        if(tmp>-1) //if the first several alphabet consist of the function name
+        {
+            // replace it with its sym 
+            *expr = funName[tmp].sym;
+            for( i =strlen(funName[tmp].name); i>1; i--)
+                *(++expr) = ' ';
+        }
+        else
+        {
+            // error;
+        }
+        ++expr;
+    }
+}
 
 double OP(double op1,double op2,char op)  
 {  
@@ -129,6 +153,7 @@ void Polish(char *s, char *output)          //将一个中缀串转换为后缀�
     unsigned int top;           //stack count
     char *stack = (char*)malloc( strlen(s) * sizeof(char));
     int i;
+    fun2sym(s);
     memset(output,'\0',sizeof output);  //输出串  
     while(*s != '\0')               //1）  
     {  
@@ -231,12 +256,11 @@ int main()
 {  
     
     // char* eq = " 18 9 41 3.1 - * + 2e2 A 1 * - ";
-    char* eq = "8 + 9 * ( 41 - 3.1 ) - B A 2e2 * 1 + 2^3";
+    char eq[] = "8 + 9 * ( 41 - 3.1 ) - sInFloorTan 2e2 * 1 + 2^3";
     double result;
     char *output = (char*)malloc(2*strlen(eq) * sizeof(char));
     // char *output = (char*)malloc(200* sizeof(char));
 
-    // char a;
     printf("\nCase:\n%s\n",eq);  
     Polish(eq, output);  
     

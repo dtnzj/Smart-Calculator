@@ -2,6 +2,8 @@
     "files.associations": {
         "stdlib.h": "c",
         "cmath": "c",
-        "math.h": "c"
+        "math.h": "c",
+        "typeinfo": "c",
+        "ctype.h": "c"
     }
 }
