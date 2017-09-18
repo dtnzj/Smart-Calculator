@@ -2,24 +2,8 @@
 #include <string.h>  
 #include <stdlib.h>
 
-typedef enum
-{
-	NotFunction,
-    sqrt,
-    sin,
-    cos,
-    tg,
-    ctg,
-    arcsin,
-    arccos,
-    arctg,
-    ln,
-    floor,
-    ceil
-} fun_t;
-
-fun_t isFunction(char* op);
-fun_t isSymFunction(char op);
+int isFunction(char* op);
+int isSymFunction(char op);
 
 //判断运算符级别函数；其中* /的级别为2，+ -的级别为1；  
 // 此处如果返回0 应当报错
@@ -92,7 +76,7 @@ funName2Sym funName[11] = { "sin",      'A',    //1
                             "ceil",     'L'     //11
 };
                 
-fun_t isFunction(char* op)
+int isFunction(char* op)
 {
     for(int i=0; i<11;i++)
         if( op == strstr(op,funName[i].name))
@@ -100,7 +84,7 @@ fun_t isFunction(char* op)
     return 0;
 }
 
-fun_t isSymFunction(char op)
+int isSymFunction(char op)
 {
     for(int i=0; i<11;i++)
         if( op == funName[i].sym)
