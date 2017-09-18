@@ -120,6 +120,69 @@ double OP(double op1,double op2,char op)
     return res;  
 }  
   
+// 函数功能：　	将常规中缀表达式转换为逆波兰（后缀）表达式
+// 输入参数：	s 	包含中缀表达式的字符串,其中所有函数使用 funName 中对应的大写字母表示，且不含有任何其他字母。
+// 输出参数：	output	包含逆波兰表达式的字符串,各元素间以空格作为间隔符。
+void Polish(char *s, char *output)          //将一个中缀串转换为后缀串
+{  
+    unsigned int outLen = 0;  
+    unsigned int top;           //stack count
+    char *stack = (char*)malloc( strlen(s) * sizeof(char));
+    int i;
+    memset(output,'\0',sizeof output);  //输出串  
+    while(*s != '\0')               //1）  
+    {  
+        if (isDigit(s))              
+        {
+            output[outLen++] = *s;        //3）假如是操作数，把它添加到输出串中。  
+            while( *(s+1) !='\0' && isDigit( s +1 ))
+            {  
+                output[outLen++] = *( s+1 );  
+                ++s;  
+            }  
+            output[outLen++] = ' ';     //空格隔开  
+        }
+        if (*s=='(')                  //4）假如是闭括号，将它压栈。  
+        {  
+            ++top;  
+            stack[top] = *s;  
+        }  
+        while (isOperator(*s) || isSymFunction(*s))        //5)如果是运算符，执行算法对应操作；  
+        {  
+            if (top==0 || stack[top]=='(' || priority(*s) > priority( *(stack+top))) //空栈||或者栈顶为)||新来的元素优先级更高  
+            {  
+                ++top;  
+                stack[top] = *s;  
+                break;  
+            }  
+            else  
+            {  
+                output[outLen++] = stack[top];  
+                output[outLen++] = ' ';  
+                --top;  
+            }  
+        }  
+        if (*s==')')                  //6）假如是开括号，栈中运算符逐个出栈并输出，直到遇到闭括号。闭括号出栈并丢弃。  
+        {  
+            while (stack[top]!='(')  
+            {  
+                output[outLen++] = stack[top];  
+                output[outLen++] = ' ';  
+                --top;  
+            }  
+            --top;  // 此时stack[top]==')',跳过)  
+        }
+        s ++;  
+        //7）假如输入还未完毕，跳转到步骤2。  
+    }  
+    while (top!=0)                      //8）假如输入完毕，栈中剩余的所有操作符出栈并加到输出串中。  
+    {  
+        output[outLen++] = stack[top];  
+        output[outLen++] = ' ';  
+        --top;  
+    }  
+}  
+
 
 double calc(char *s)                //波兰式需要用两个栈，逆波兰式只需要一个栈  
 {  
@@ -167,19 +230,19 @@ double calc(char *s)                //波兰式需要用两个栈，逆波兰式
 int main()  
 {  
     
-    char* eq = " 18 9 41 3.1 - * + 2e2 A 1 * - ";
-    
-    // char *output = (char*)malloc(10*strlen(eq) * sizeof(char));
+    // char* eq = " 18 9 41 3.1 - * + 2e2 A 1 * - ";
+    char* eq = "8 + 9 * ( 41 - 3.1 ) - B A 2e2 * 1";
+    double result;
+    char *output = (char*)malloc(2*strlen(eq) * sizeof(char));
     // char *output = (char*)malloc(200* sizeof(char));
 
     // char a;
-    // printf("Case:\n%s\n",eq);  
+    printf("\nCase:\n%s\n",eq);  
+    Polish(eq, output);  
     
-    // Polish(eq, output);  
-    
-    // printf("%s\n",output);  
-    double output = calc(eq);
-    // printf("%f\n",output);  
+    printf("\noutput =%s\n",output);  
+    result = calc(output);
+    printf("\nresult =%f",result);  
     getchar();
     return 0;  
 }  
