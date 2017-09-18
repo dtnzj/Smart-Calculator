@@ -231,7 +231,7 @@ int main()
 {  
     
     // char* eq = " 18 9 41 3.1 - * + 2e2 A 1 * - ";
-    char* eq = "8 + 9 * ( 41 - 3.1 ) - B A 2e2 * 1";
+    char* eq = "8 + 9 * ( 41 - 3.1 ) - B A 2e2 * 1 + 2^3";
     double result;
     char *output = (char*)malloc(2*strlen(eq) * sizeof(char));
     // char *output = (char*)malloc(200* sizeof(char));
