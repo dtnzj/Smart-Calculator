@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <ctype.h>
 
 // TODO: Include local header files
 
@@ -64,6 +66,123 @@ char const* GetErrorString(error_t error)
   return "";
 }
 
+
+int isFunction(char* op);
+int isSymFunction(char op);
+
+//判断运算符级别函数；其中* /的级别为2，+ -的级别为1；  
+// 此处如果返回0 应当报错
+int priority(char op)               
+{  
+    if (op=='+' || op=='-')  
+        return 1;  
+    if (op=='*' || op=='/')  
+        return 2;  
+    if (op == '^')
+		return 3;
+    if (isSymFunction(op))
+        return 4;
+    if (op == '~')
+		return 5;
+    else  
+        return 0;  
+}  
+
+int isNumber(char *op)
+{
+    return (*op >='0' && *op<='9');
+}
+
+//这个函数有个bug，如果p 后面跟的不是i 就会出问题
+int isConstantNum(char *op)
+{
+    return (((*op =='p' || *op =='P') && (*(op+1) =='i' || *(op+1) =='I')) 
+            || *op =='e' );
+}
+
+int isDigit(char *op)
+{
+    return (*op =='.' || *op == 'E' || isNumber( op ) || isConstantNum( op ) );
+}
+
+int isOperator(char op)                //判断输入串中的字符是不是操作符，如果是返回true  
+{  
+    return (op=='+' || op=='-' || op=='*' || op=='/' || op=='^' || op=='~');  
+}  
+
+typedef struct
+{
+    char name[7];
+    char sym;
+} funName2Sym;
+#define FUNMAX 13
+funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
+                            "cos",      'B',    //2
+                            "tg",       'C',    //3
+                            "tan",       'C',    //3
+                            "ctg",      'D',    //4
+                            "ctan",      'D',    //4
+                            "arcsin",   'F',    //5
+                            "arccos",   'G',    //6
+                            "arctg",    'H',    //7
+                            "sqrt",     'I',    //8
+                            "ln",       'J',    //9
+                            "floor",    'K',    //10
+                            "ceil",     'L'     //11
+};
+
+
+int isFunction(char* op)
+{
+    for(int i=0; i<FUNMAX;i++)
+        if( op == strstr(op,funName[i].name))
+            return i+1;
+    return 0;
+}
+
+int isSymFunction(char op)
+{
+    for(int i=0; i<FUNMAX;i++)
+        if( op == funName[i].sym)
+            return i+1;
+    return 0;
+}
+
+char *strlwr(char *str)
+{
+    char *orign =str;
+    for (; *str!='\0'; str++,orign++)
+        *orign = tolower(*str);
+    return orign;
+}
+
+
+// 将字符串中的数学函数转换为对应的字母代号
+void fun2sym(char *expr)
+{
+    int tmp ;
+    int i;
+    strlwr(expr);  // 将字符串中所有字母转换为小写字母
+    while (*expr)
+    {
+        tmp = isFunction(expr)-1;
+        // 这个写法有点儿逆天，但是暂时没找到更好的优化方案
+        if(tmp>-1) //if the first several alphabet consist of the function name
+        {
+            // replace it with its sym 
+            *expr = funName[tmp].sym;
+            for( i =strlen(funName[tmp].name); i>1; i--)
+                *(++expr) = ' ';
+        }
+        else
+        {
+            // error;
+        }
+        ++expr;
+    }
+}
+
+
 // 2017/9/18
 //	根据给定操作符和操作数求解计算结果
 double OP(double op1,double op2,char op)  
@@ -104,6 +223,7 @@ void Polish(char *s, char *output, error_t* error)          //将一个中缀串
     unsigned int top;           //stack count
     char *stack = (char*)malloc( strlen(s) * sizeof(char));
     int i;
+	fun2sym(s);
     memset(output,'\0',sizeof output);  //输出串  
     while(*s != '\0')               //1）  
     {  
@@ -168,20 +288,24 @@ void Polish(char *s, char *output, error_t* error)          //将一个中缀串
 // 		error :错误码输出码指针
 // 输出：		表达式计算结果
 // TODO: Move to a separate module 'calc'
-double Calculate(char const* expr, error_t* error)	
+double Calculate(char const* expr_in, error_t* error)	
 {
 	double result;
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
-	char* dst = (char*)malloc( 20 * sizeof(char));  
+	char *expr = (char*)malloc(2*strlen(expr_in) * sizeof(char));
+    char *dst = (char*)malloc( 20 * sizeof(char));  
 	double* cSt1 = (double*)malloc( strlen(expr) * sizeof(double));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
-	unsigned int top1=0;  
 	
-	while ( *expr )  
+	unsigned int top1=0,i=0;  
+	
+	Polish(expr_in, expr, error);
+	
+	while ( *(expr+i) )  
 	{  
-		printf( "\ns = %s ", expr);
-		if (*expr != ' ')  
+		printf( "\ns = %s ", (expr+i));
+		if (*(expr+i) != ' ')  
 		{  
-			sscanf(expr,"%s",dst);  
+			sscanf((expr+i),"%s",dst);  
 			// printf("\n, %d ",dst,isDigit(dst));
 			if (isDigit(dst))  
 			{  
@@ -202,18 +326,19 @@ double Calculate(char const* expr, error_t* error)
 				cSt1[top1] = OP( 0, cSt1[top1], dst[0]); 
 				printf("%f",cSt1[top1]); 
 			}
-			while (*expr && *expr != ' ')  
+			while (*(expr+i) && *(expr+i) != ' ')  
 			{
-				// printf("p = %p\n",expr);
-				++expr;
+				// printf("p = %p\n",(expr+i));
+				++i;
 			}  
 		}
-		++expr;  
+		++i;  
 	}
 	result = cSt1[1];
-	
+
 	free(dst);
 	free(cSt1);
+	free(expr);
 		
 	if (error != NULL)
     	*error = ERR_OK;
@@ -390,6 +515,7 @@ void ProcessLine(char const* line)
 
   printf("%s == ", line);
   result = Calculate(line, &lastError);
+	printf("ok1");
   if (lastError == ERR_OK)
     printf("%lg\n", result);
   else
@@ -398,13 +524,11 @@ void ProcessLine(char const* line)
 
 int main(int argc, char const* argv[])
 {
-  	char* line = "100%200*lnlg(asin6^2)/(3asincos2)";
+  	char line[] = "100/200*lnsqrt(arctg6^2)/(3*arcsincos2)";
 
 	ProcessLine(line);
 	free(line);
 
-	// Clean up
-	if (in != stdin)
-		fclose(in);
+
 	return 0;
 }
