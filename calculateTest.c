@@ -142,12 +142,12 @@ void Polish(char *s, char *output)          //将一个中缀串转换为后缀�
             }  
             output[outLen++] = ' ';     //空格隔开  
         }
-        if (*s=='(')                  //4）假如是闭括号，将它压栈。  
+        if (*s=='(' || isSymFunction(*s))                  //4）假如是闭括号，将它压栈。  
         {  
             ++top;  
             stack[top] = *s;  
         }  
-        while (isOperator(*s) || isSymFunction(*s))        //5)如果是运算符，执行算法对应操作；  
+        while (isOperator(*s) )        //5)如果是运算符，执行算法对应操作；  
         {  
             if (top==0 || stack[top]=='(' || priority(*s) > priority( *(stack+top))) //空栈||或者栈顶为)||新来的元素优先级更高  
             {  
