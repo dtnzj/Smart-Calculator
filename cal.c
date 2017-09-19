@@ -24,6 +24,11 @@
 
 /***************************Questions***********************************/
 //1.在对动态分配变量line的使用需要小心，防止由于更改‘\n’字符而导致内存泄露
+//2.free（） 总是会导致内存溢出，网上说可能是修改了malloc的指针导致的，
+//  但是经过检查，出错的free对应的指针都没有被修改过，
+//  因此考虑是不是编译器自动添加了free函数，导致其被重复调用而出错，
+//  暂时将free注释掉，忽略该问题
+//3. see line 40
 /****************************END****************************************/
 
 
@@ -38,9 +43,31 @@ typedef enum
 	NORMAL,
 	END_LINE,
 	END_FILE,
-	NO_MEMORY,
+	NO_MEMORY,              //question 这里为什么要放no memory ? 岂不是跟 error_t 打架了 ？
 }statut_t;
 statut_t Statut_File = NORMAL;
+
+// TODO: Move to a separate module 'calc'
+typedef enum
+{
+  ERR_OK,
+  ERR_NOT_ENOUGH_MEMORY,
+  ERR_OTHER,            // add this statue to represent all other error that we didn't give
+  
+  // TODO: Add your own error codes
+} error_t;
+//error_t error = ERR_OK;
+
+// TODO: Move to a separate module 'calc'
+char const* GetErrorString(error_t error)
+{
+  // TODO: Find the corresponding error description
+  UNUSED_PARAMETER(error);
+  return "";
+}
+
+
+/*************************END*******************************************/
 
 int isFunction(char* op);
 int isSymFunction(char op);
@@ -68,29 +95,35 @@ int isNumber(char *op)
     return (*op >='0' && *op<='9');
 }
 
-//这个函数有个bug，如果p 后面跟的不是i 就会出问题
+
 int isConstantNum(char *op)
 {
-    return (((*op =='p' || *op =='P') && (*(op+1) =='i' || *(op+1) =='I')) 
-            || *op =='e' );
+    return (    ((*op =='p') && (*(op+1) =='i')) 
+               || (*op =='e')
+           );
 }
 
 int isDigit(char *op)
 {
-    return (*op =='.' || *op == 'E' || isNumber( op ) || isConstantNum( op ) );
+    return  ((*op =='.'&&isNumber( op+1 ))      //小数，且点号后面有数字
+            || isNumber( op )                   //数字
+            || isConstantNum( op )              //数学常数: 自然对数e 以及圆周率pi
+            );
 }
 
-int isOperator(char op)                //判断输入串中的字符是不是操作符，如果是返回true  
+//判断输入串中的字符是不是操作符，如果是返回 1 
+int isOperator(char op)                
 {  
     return (op=='+' || op=='-' || op=='*' || op=='/' || op=='^' || op=='~');  
 }  
 
+//在此定义了改程序支持的所有数学函数，及其代号
+#define FUNMAX 13   //程序支持的所有数学函数个数
 typedef struct
 {
     char name[7];
     char sym;
 } funName2Sym;
-#define FUNMAX 13
 funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
                             "cos",      'B',    //2
                             "tg",       'C',    //3
@@ -105,7 +138,7 @@ funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
                             "floor",    'K',    //10
                             "ceil",     'L'     //11
 };
-
+// ---------------------end---------------------------------
 
 int isFunction(char* op)
 {
@@ -162,7 +195,7 @@ void fun2sym(char *expr)
 
 // 2017/9/18
 //	根据给定操作符和操作数求解计算结果
-double OP(double op1,double op2,char op)  
+double OP(double op1,double op2,char op, error_t *error)  
 {  
     double res = 0;  
     
@@ -184,13 +217,15 @@ double OP(double op1,double op2,char op)
         case 'J': res =   log(op2); break;
         case 'K': res = floor(op2); break;
         case 'L': res =  ceil(op2); break;
-        
+        default: *error = ERR_OTHER;
     }
     return res;  
 }  
-  
+
+
 // 2017/9/20 by nzj
 // stack is stack, it is not the input string
+// add the error test codes
 // 2017/9/19
 // 目前这个函数传参混乱；引入的报错参数有BUG，先删掉了
 // 2017/9/18
@@ -199,7 +234,7 @@ double OP(double op1,double op2,char op)
 // 输入参数：	s 	包含中缀表达式的字符串,其中所有函数使用 funName 中对应的大写字母表示，且不含有任何其他字母。
 // 输出参数：	output	包含逆波兰表达式的字符串,各元素间以空格作为间隔符。
 
-void Polish (char const*s, char *output)
+void Polish (char const*s, char *output, error_t* error)
 {  
     unsigned int outLen = 0;  
     unsigned int top;           //stack count
@@ -207,8 +242,19 @@ void Polish (char const*s, char *output)
     char *stack = (char*)malloc( strlen(s) * sizeof(char));
     char *expr_in = (char*)malloc( strlen(s) * sizeof(char));
     int i;
-	strcpy(expr_in,s);
-    printf("\nPolish expr_in = %s",expr_in);
+    
+    // no memory error test 
+    if (stack == NULL || expr_in == NULL )
+    {
+        printf("ERROR: Memory Not Enough \n");
+        *error = ERR_NOT_ENOUGH_MEMORY;
+        free(stack);
+        free(expr_in);
+        return 0;
+    }
+
+    strcpy(expr_in,s);
+    // printf("\nPolish expr_in = %s",expr_in);
     fun2sym(expr_in);
     memset(output,'\0',sizeof output);  //输出串  
     while(*expr_in != '\0')               //1）  
@@ -268,31 +314,13 @@ void Polish (char const*s, char *output)
 }  
 
 
-/*************************END*******************************************/
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Dummy calc module
 
-// TODO: Move to a separate module 'calc'
-typedef enum
-{
-  ERR_OK,
-  ERR_NOT_ENOUGH_MEMORY,
-  // TODO: Add your own error codes
-} error_t;
-//error_t error = ERR_OK;
-
-// TODO: Move to a separate module 'calc'
-char const* GetErrorString(error_t error)
-{
-  // TODO: Find the corresponding error description
-  UNUSED_PARAMETER(error);
-  return "";
-}
-
-
-
+// 2017/9/20
+// add the error test codes 
 // 2017/9/18
 // 添加的已完成的calculate 函数 
 // 当前不具备错误码输入输出功能。
@@ -308,13 +336,27 @@ double Calculate(char const* expr_in, error_t* error)
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
 	char *expr = (char*)malloc(2*strlen(expr_in) * sizeof(char));
     char *dst = (char*)malloc( 20 * sizeof(char));  
-	double* cSt1 = (double*)malloc( sizeof(expr));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
-	unsigned int top1=0,i=0;  
-    Polish (expr_in, expr);
+	double* cSt = (double*)malloc( sizeof(expr));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
+    unsigned int top1=0,i=0;  
+    
+    // no memory error test 
+    if (expr == NULL || dst == NULL ||cSt == NULL )
+    {
+        printf("ERROR: Memory Not Enough \n");
+        *error = ERR_NOT_ENOUGH_MEMORY;
+        free(expr);
+        free(dst);
+        free(cSt);
+        return 0;
+    }
+    Polish (expr_in, expr, error);
+    // if the polish function gives error status
+    if (*error != ERR_OK)
+        return 0;
 	
 	while ( *(expr+i) )  
 	{  
-		printf( "\ns = %s ", (expr+i));
+		// printf( "\ns = %s ", (expr+i));
 		if (*(expr+i) != ' ')  
 		{  
 			sscanf((expr+i),"%s",dst);  
@@ -322,21 +364,21 @@ double Calculate(char const* expr_in, error_t* error)
 			if (isDigit(dst))  
 			{  
 				++top1;  
-				cSt1[top1] = atof(dst);     //进栈  
+				cSt[top1] = atof(dst);     //进栈  
 			}  
 			else if(isOperator(*dst))
 			{  
 				
-				printf("\n %f %c %f=",cSt1[top1-1], dst[0], cSt1[top1]);
-				cSt1[top1-1] = OP( cSt1[top1-1], cSt1[top1], dst[0]); 
-				printf("%f",cSt1[top1-1]); 
+				// printf("\n %f %c %f=",cSt[top1-1], dst[0], cSt[top1]);
+				cSt[top1-1] = OP( cSt[top1-1], cSt[top1], dst[0], error); 
+				// printf("%f",cSt[top1-1]); 
 				--top1;     //操作数栈：出栈俩，进栈一 
 			}
 			else if(isSymFunction(*dst))
 			{
-				printf("\n %c %f=", dst[0], cSt1[top1]);
-				cSt1[top1] = OP( 0, cSt1[top1], dst[0]); 
-				printf("%f",cSt1[top1]); 
+				// printf("\n %c %f=", dst[0], cSt[top1]);
+				cSt[top1] = OP( 0, cSt[top1], dst[0], error); 
+				// printf("%f",cSt[top1]); 
 			}
 			while (*(expr+i) && *(expr+i) != ' ')  
 			{
@@ -347,15 +389,15 @@ double Calculate(char const* expr_in, error_t* error)
 		++i;  
 	}
 
-    result = cSt1[1];
+    result = cSt[1];
     
-    // free(cSt1);
+    // free(cSt);
     // free(dst);
     // dst = NULL;
-    // if (cSt1 != NULL)
+    // if (cSt != NULL)
     // {
-    //     free(cSt1);
-    //     cSt1 = NULL;
+    //     free(cSt);
+    //     cSt = NULL;
     // }
 	// free(expr);
 		
@@ -534,7 +576,8 @@ void ProcessLine(char const* line)
     error_t *lastError_t = &lastError;
 
     printf("%s == ", line);
-    result = Calculate(line, lastError_t);
+    // if (NeedCalculate( line, strlen(line)))
+        result = Calculate(line, lastError_t);
         
     if (lastError == ERR_OK)
     {
