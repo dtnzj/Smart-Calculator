@@ -31,6 +31,7 @@
 #define TRUE 0
 #define FALSE 1
 
+
 // Question :so what your meaning to built this enum ?
 typedef enum
 {
@@ -40,32 +41,6 @@ typedef enum
 	NO_MEMORY,
 }statut_t;
 statut_t Statut_File = NORMAL;
-
-
-
-/*************************END*******************************************/
-
-
-//////////////////////////////////////////////////////////////////////////////
-// Dummy calc module
-
-// TODO: Move to a separate module 'calc'
-typedef enum
-{
-  ERR_OK,
-  ERR_NOT_ENOUGH_MEMORY,
-  // TODO: Add your own error codes
-} error_t;
-error_t error = ERR_OK;
-
-// TODO: Move to a separate module 'calc'
-char const* GetErrorString(error_t error)
-{
-  // TODO: Find the corresponding error description
-  UNUSED_PARAMETER(error);
-  return "";
-}
-
 
 int isFunction(char* op);
 int isSymFunction(char op);
@@ -134,7 +109,8 @@ funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
 
 int isFunction(char* op)
 {
-    for(int i=0; i<FUNMAX;i++)
+	int i=0;
+	for( ;i<FUNMAX;i++)
         if( op == strstr(op,funName[i].name))
             return i+1;
     return 0;
@@ -142,17 +118,18 @@ int isFunction(char* op)
 
 int isSymFunction(char op)
 {
-    for(int i=0; i<FUNMAX;i++)
+	int i=0;
+    for(; i<FUNMAX;i++)
         if( op == funName[i].sym)
             return i+1;
     return 0;
 }
 
-char *strlwr(char *str)
+char *strlwrt(char *str)
 {
     char *orign =str;
     for (; *str!='\0'; str++,orign++)
-        *orign = tolower(*str);
+        *orign = (char)tolower(*str);
     return orign;
 }
 
@@ -162,7 +139,7 @@ void fun2sym(char *expr)
 {
     int tmp ;
     int i;
-    strlwr(expr);  // 将字符串中所有字母转换为小写字母
+    strlwrt(expr);  // 将字符串中所有字母转换为小写字母
     while (*expr)
     {
         tmp = isFunction(expr)-1;
@@ -212,15 +189,19 @@ double OP(double op1,double op2,char op)
     return res;  
 }  
   
+// 2017/9/19
+// 目前这个函数传参混乱；引入的报错参数有BUG，先删掉了
 // 2017/9/18
 // 当前不具备错误码输入输出功能。
 // 函数功能：　	将常规中缀表达式转换为逆波兰（后缀）表达式
 // 输入参数：	s 	包含中缀表达式的字符串,其中所有函数使用 funName 中对应的大写字母表示，且不含有任何其他字母。
 // 输出参数：	output	包含逆波兰表达式的字符串,各元素间以空格作为间隔符。
-void Polish(char *s, char *output, error_t* error)          //将一个中缀串转换为后缀串
+
+void Polish (char const* s, char *output)
 {  
     unsigned int outLen = 0;  
     unsigned int top;           //stack count
+
     char *stack = (char*)malloc( strlen(s) * sizeof(char));
     int i;
 	fun2sym(s);
@@ -279,6 +260,32 @@ void Polish(char *s, char *output, error_t* error)          //将一个中缀串
 	free(stack); 
 }  
 
+
+/*************************END*******************************************/
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Dummy calc module
+
+// TODO: Move to a separate module 'calc'
+typedef enum
+{
+  ERR_OK,
+  ERR_NOT_ENOUGH_MEMORY,
+  // TODO: Add your own error codes
+} error_t;
+//error_t error = ERR_OK;
+
+// TODO: Move to a separate module 'calc'
+char const* GetErrorString(error_t error)
+{
+  // TODO: Find the corresponding error description
+  UNUSED_PARAMETER(error);
+  return "";
+}
+
+
+
 // 2017/9/18
 // 添加的已完成的calculate 函数 
 // 当前不具备错误码输入输出功能。
@@ -298,7 +305,7 @@ double Calculate(char const* expr_in, error_t* error)
 	
 	unsigned int top1=0,i=0;  
 	
-	Polish(expr_in, expr, error);
+	Polish (expr_in, expr);
 	
 	while ( *(expr+i) )  
 	{  
@@ -417,7 +424,7 @@ char* ReadLine(FILE* in, int* len)
   return line;
 }
 
-//parameters: string
+//parameters: string, len
 //function: whether need to calculate
 //return： True or False
 //the types of errors are included at here: 
@@ -512,9 +519,10 @@ void ProcessLine(char const* line)
 {
   double result;
   error_t lastError = ERR_OK;
+  error_t *lastError_t = &lastError;
 
   printf("%s == ", line);
-  result = Calculate(line, &lastError);
+  result = Calculate(line, lastError_t);
 	printf("ok1");
   if (lastError == ERR_OK)
     printf("%lg\n", result);
