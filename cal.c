@@ -189,6 +189,8 @@ double OP(double op1,double op2,char op)
     return res;  
 }  
   
+// 2017/9/20 by nzj
+// stack is stack, it is not the input string
 // 2017/9/19
 // 目前这个函数传参混乱；引入的报错参数有BUG，先删掉了
 // 2017/9/18
@@ -197,38 +199,41 @@ double OP(double op1,double op2,char op)
 // 输入参数：	s 	包含中缀表达式的字符串,其中所有函数使用 funName 中对应的大写字母表示，且不含有任何其他字母。
 // 输出参数：	output	包含逆波兰表达式的字符串,各元素间以空格作为间隔符。
 
-void Polish (char const* s, char *output)
+void Polish (char const*s, char *output)
 {  
     unsigned int outLen = 0;  
     unsigned int top;           //stack count
 
     char *stack = (char*)malloc( strlen(s) * sizeof(char));
+    char *expr_in = (char*)malloc( strlen(s) * sizeof(char));
     int i;
-	fun2sym(s);
+	strcpy(expr_in,s);
+    printf("\nPolish expr_in = %s",expr_in);
+    fun2sym(expr_in);
     memset(output,'\0',sizeof output);  //输出串  
-    while(*s != '\0')               //1）  
+    while(*expr_in != '\0')               //1）  
     {  
-        if (isDigit(s))              
+        if (isDigit(expr_in))              
         {
-            output[outLen++] = *s;        //3）假如是操作数，把它添加到输出串中。  
-            while( *(s+1) !='\0' && isDigit( s +1 ))
+            output[outLen++] = *expr_in;        //3）假如是操作数，把它添加到输出串中。  
+            while( *(expr_in+1) !='\0' && isDigit( expr_in +1 ))
             {  
-                output[outLen++] = *( s+1 );  
-                ++s;  
+                output[outLen++] = *( expr_in+1 );  
+                ++expr_in;  
             }  
             output[outLen++] = ' ';     //空格隔开  
         }
-        if (*s=='(' || isSymFunction(*s))                  //4）假如是闭括号，将它压栈。  
+        if (*expr_in=='(' || isSymFunction(*expr_in))                  //4）假如是闭括号，将它压栈。  
         {  
             ++top;  
-            stack[top] = *s;  
+            stack[top] = *expr_in;  
         }  
-        while (isOperator(*s) )        //5)如果是运算符，执行算法对应操作；  
+        while (isOperator(*expr_in) )        //5)如果是运算符，执行算法对应操作；  
         {  
-            if (top==0 || stack[top]=='(' || priority(*s) > priority( *(stack+top))) //空栈||或者栈顶为)||新来的元素优先级更高  
+            if (top==0 || stack[top]=='(' || priority(*expr_in) > priority( *(stack+top))) //空栈||或者栈顶为)||新来的元素优先级更高  
             {  
                 ++top;  
-                stack[top] = *s;  
+                stack[top] = *expr_in;  
                 break;  
             }  
             else  
@@ -238,7 +243,7 @@ void Polish (char const* s, char *output)
                 --top;  
             }  
         }  
-        if (*s==')')                  //6）假如是开括号，栈中运算符逐个出栈并输出，直到遇到闭括号。闭括号出栈并丢弃。  
+        if (*expr_in==')')                  //6）假如是开括号，栈中运算符逐个出栈并输出，直到遇到闭括号。闭括号出栈并丢弃。  
         {  
             while (stack[top]!='(')  
             {  
@@ -248,7 +253,7 @@ void Polish (char const* s, char *output)
             }  
             --top;  // 此时stack[top]==')',跳过)  
         }
-        s ++;  
+        expr_in ++;  
         //7）假如输入还未完毕，跳转到步骤2。  
     }  
     while (top!=0)                      //8）假如输入完毕，栈中剩余的所有操作符出栈并加到输出串中。  
@@ -257,7 +262,9 @@ void Polish (char const* s, char *output)
         output[outLen++] = ' ';  
         --top;  
 	}
-	free(stack); 
+    // free(stack); 
+    // free(expr_in); 
+    
 }  
 
 
@@ -301,11 +308,9 @@ double Calculate(char const* expr_in, error_t* error)
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
 	char *expr = (char*)malloc(2*strlen(expr_in) * sizeof(char));
     char *dst = (char*)malloc( 20 * sizeof(char));  
-	double* cSt1 = (double*)malloc( strlen(expr) * sizeof(double));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
-	
+	double* cSt1 = (double*)malloc( sizeof(expr));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
 	unsigned int top1=0,i=0;  
-	
-	Polish (expr_in, expr);
+    Polish (expr_in, expr);
 	
 	while ( *(expr+i) )  
 	{  
@@ -341,11 +346,18 @@ double Calculate(char const* expr_in, error_t* error)
 		}
 		++i;  
 	}
-	result = cSt1[1];
 
-	free(dst);
-	free(cSt1);
-	free(expr);
+    result = cSt1[1];
+    
+    // free(cSt1);
+    // free(dst);
+    // dst = NULL;
+    // if (cSt1 != NULL)
+    // {
+    //     free(cSt1);
+    //     cSt1 = NULL;
+    // }
+	// free(expr);
 		
 	if (error != NULL)
     	*error = ERR_OK;
@@ -517,26 +529,27 @@ error_t ReportError(error_t error)
 
 void ProcessLine(char const* line)
 {
-  double result;
-  error_t lastError = ERR_OK;
-  error_t *lastError_t = &lastError;
+    double result;
+    error_t lastError = ERR_OK;
+    error_t *lastError_t = &lastError;
 
-  printf("%s == ", line);
-  result = Calculate(line, lastError_t);
-	printf("ok1");
-  if (lastError == ERR_OK)
-    printf("%lg\n", result);
-  else
-    ReportError(lastError);
+    printf("%s == ", line);
+    result = Calculate(line, lastError_t);
+        
+    if (lastError == ERR_OK)
+    {
+         printf("\n%lg\n", result);
+    }
+    else
+        ReportError(lastError);
 }
 
 int main(int argc, char const* argv[])
 {
-  	char line[] = "100/200*lnsqrt(arctg6^2)/(3*arcsincos2)";
+  	char line[] = "60+100/200*lnsqrt(arctg6^2)/(3*arcsincos2)";
 
 	ProcessLine(line);
-	free(line);
-
-
+	// free(line);
+    getchar();
 	return 0;
 }
