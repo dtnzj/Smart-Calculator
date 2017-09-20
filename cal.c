@@ -31,6 +31,7 @@
 //3. see line 40 （这个没懂啥意思）
 //4. 尽量把可以不用动态变量的地方替换掉，并且在进行指针操作是谨慎的检查
 //5. 可以的话吧函数传参时候的变量名尽量改成一致的，不会造成误解。
+//6. see line 411
 /****************************END****************************************/
 
 
@@ -55,6 +56,7 @@ typedef enum
 {
   ERR_OK,
   ERR_NOT_ENOUGH_MEMORY,
+  ERR_WRONG_EXPRESSION,
   ERR_OTHER,            // add this statue to represent all other error that we didn't give
   
   // TODO: Add your own error codes
@@ -64,9 +66,30 @@ typedef enum
 // TODO: Move to a separate module 'calc'
 char const* GetErrorString(error_t error)
 {
-  // TODO: Find the corresponding error description
-  UNUSED_PARAMETER(error);
-  return "";
+    char *errorStr;
+    // TODO: Find the corresponding error description
+    switch(error)
+    {
+        case ERR_OK: 
+            errorStr = "No Error";
+            break;
+        case ERR_NOT_ENOUGH_MEMORY:
+            errorStr = "ERR_NOT_ENOUGH_MEMORY";
+            break;
+        case ERR_WRONG_EXPRESSION:
+            errorStr = "ERR_WRONG_EXPRESSION";
+            break;
+        case ERR_OTHER:
+            errorStr = "Unkown Error";
+            break;        
+    }
+    return errorStr;
+}
+
+void ReportError(error_t error)
+{
+  printf("ERROR: %s\n", GetErrorString(error));
+//   return error;
 }
 
 
@@ -195,8 +218,8 @@ void fun2sym(char *expr, error_t *error)
         else if(isAlphabet(*expr) && *expr != 'e')
         {
             // error;
-			printf("wrong expression");
-			*error = ERR_OTHER;
+			// printf("wrong expression");
+			*error = ERR_WRONG_EXPRESSION;
 			return;
         }
         ++expr;
@@ -247,50 +270,51 @@ double OP(double op1,double op2,char op, error_t *error)
 
 void Polish (char const*s, char *output, error_t* error)
 {  
-    unsigned int outLen = 0;  
+    unsigned int outLen = 0,i=0;  
     unsigned int top = 0;           //stack count
 
     char *stack = (char*)malloc( strlen(s) * sizeof(char));
     char *expr_in = (char*)malloc( strlen(s) * sizeof(char));
-
+    
     // no memory error test 
     if (stack == NULL || expr_in == NULL )
     {
-        printf("ERROR: Memory Not Enough \n");
+        // printf("ERROR: Memory Not Enough \n");
         *error = ERR_NOT_ENOUGH_MEMORY;
         free(stack);
         free(expr_in);
+        return;
     }
 
     strcpy(expr_in,s);
     // printf("\nPolish expr_in = %s",expr_in);
     fun2sym(expr_in, error);
     if(*error != ERR_OK)
-		return;
-    memset(output,'\0',sizeof output);  //输出串  
-    while(*expr_in != '\0')               //1）  
+        return;
+    memset(output,'\0',strlen(output) *sizeof (char));  //输出串  
+    while(*(expr_in+i))               //1）  
     {  
-        if (isDigit(expr_in))              
+        if (isDigit(expr_in+i))              
         {
-            output[outLen++] = *expr_in;        //3）假如是操作数，把它添加到输出串中。  
-            while( *(expr_in+1) !='\0' && isDigit( expr_in +1 ))
+            output[outLen++] = *(expr_in+i);        //3）假如是操作数，把它添加到输出串中。  
+            while( *(expr_in+i+1) !='\0' && isDigit( expr_in+i +1 ))
             {  
-                output[outLen++] = *( expr_in+1 );  
-                ++expr_in;  
+                output[outLen++] = *( expr_in+i+1 );  
+                ++i;  
             }  
             output[outLen++] = ' ';     //空格隔开  
         }
-        if (*expr_in=='(' || isSymFunction(*expr_in))                  //4）假如是闭括号，将它压栈。  
+        if (*(expr_in+i)=='(' || isSymFunction(*(expr_in+i)))                  //4）假如是闭括号，将它压栈。  
         {  
             ++top;  
-            stack[top] = *expr_in;  
+            stack[top] = *(expr_in+i);  
         }  
-        while (isOperator(*expr_in) )        //5)如果是运算符，执行算法对应操作；  
+        while (isOperator(*(expr_in+i)) )        //5)如果是运算符，执行算法对应操作；  
         {  
-            if (top==0 || stack[top]=='(' || priority(*expr_in) > priority( *(stack+top))) //空栈||或者栈顶为)||新来的元素优先级更高  
+            if (top==0 || stack[top]=='(' || priority(*(expr_in+i)) > priority( *(stack+top))) //空栈||或者栈顶为)||新来的元素优先级更高  
             {  
                 ++top;  
-                stack[top] = *expr_in;  
+                stack[top] = *(expr_in+i);  
                 break;  
             }  
             else  
@@ -300,7 +324,7 @@ void Polish (char const*s, char *output, error_t* error)
                 --top;  
             }  
         }  
-        if (*expr_in==')')                  //6）假如是开括号，栈中运算符逐个出栈并输出，直到遇到闭括号。闭括号出栈并丢弃。  
+        if (*(expr_in+i)==')')                  //6）假如是开括号，栈中运算符逐个出栈并输出，直到遇到闭括号。闭括号出栈并丢弃。  
         {  
             while (stack[top]!='(')  
             {  
@@ -310,7 +334,7 @@ void Polish (char const*s, char *output, error_t* error)
             }  
             --top;  // 此时stack[top]==')',跳过)  
         }
-        expr_in ++;  
+        ++ i;  
         //7）假如输入还未完毕，跳转到步骤2。  
     }  
     while (top!=0)                      //8）假如输入完毕，栈中剩余的所有操作符出栈并加到输出串中。  
@@ -319,8 +343,8 @@ void Polish (char const*s, char *output, error_t* error)
         output[outLen++] = ' ';  
         --top;  
 	}
-    // free(stack); 
-    // free(expr_in); 
+    free(stack); 
+    free(expr_in); 
     
 }  
 
@@ -345,15 +369,16 @@ double Calculate(char const* expr_in, error_t* error)
 {
 	double result;
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
-	char *expr = (char*)malloc(2*strlen(expr_in) * sizeof(char));
+    char *expr= (char*)malloc(2*strlen(expr_in) * sizeof(char));
     char *dst = (char*)malloc( 20 * sizeof(char));  
-	double* cSt = (double*)malloc( sizeof(expr));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
+    double* cSt = (double*)malloc( sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     unsigned int top1=0,i=0;  
     
+    // char *cSt = p;
     // no memory error test 
     if (expr == NULL || dst == NULL ||cSt == NULL )
     {
-        printf("ERROR: Memory Not Enough \n");
+        // printf("ERROR: Memory Not Enough \n");
         *error = ERR_NOT_ENOUGH_MEMORY;
         free(expr);
         free(dst);
@@ -367,7 +392,7 @@ double Calculate(char const* expr_in, error_t* error)
 	
 	while ( *(expr+i) )  
 	{  
-		printf( "\ns = %s ", (expr+i));
+		// printf( "\ns = %s ", (expr+i));
 		if (*(expr+i) != ' ')  
 		{  
 			sscanf((expr+i),"%s",dst);  
@@ -379,16 +404,16 @@ double Calculate(char const* expr_in, error_t* error)
 			else if(isOperator(*dst))
 			{  
 				
-				printf("\n %f %c %f=",cSt[top1-1], dst[0], cSt[top1]);
+				// printf("\n %f %c %f=",cSt[top1-1], dst[0], cSt[top1]);
 				cSt[top1-1] = OP( cSt[top1-1], cSt[top1], dst[0], error); 
-				printf("%f",cSt[top1-1]); 
+				// printf("%f",cSt[top1-1]); 
 				--top1;     //操作数栈：出栈俩，进栈一 
 			}
 			else if(isSymFunction(*dst))
 			{
-				printf("\n %c %f=", dst[0], cSt[top1]);
+				// printf("\n %c %f=", dst[0], cSt[top1]);
 				cSt[top1] = OP( 0, cSt[top1], dst[0], error); 
-				printf("%f",cSt[top1]); 
+				// printf("%f",cSt[top1]); 
 			}
 			while (*(expr+i) && *(expr+i) != ' ')  
 			    ++i;
@@ -398,18 +423,16 @@ double Calculate(char const* expr_in, error_t* error)
 
     result = cSt[1];
     
-    // free(cSt);
-    // free(dst);
-    // dst = NULL;
-    // if (cSt != NULL)
-    // {
-    //     free(cSt);
-    //     cSt = NULL;
-    // }
-	// free(expr);
-		
-	if (error != NULL)
-    	*error = ERR_OK;
+    free(cSt);
+    cSt = NULL;
+    free(dst);
+    dst = NULL;
+    free(expr);
+    expr = NULL;
+    
+    // what that code means ?
+	// if (error == NULL)
+    // 	*error = ERR_OK;
 
 	return result;
 }
@@ -570,11 +593,7 @@ int NeedCalculate(char const* line, int len)
     return 1;
 }
 
-error_t ReportError(error_t error)
-{
-  printf("ERROR: %s\n", GetErrorString(error));
-  return error;
-}
+
 
 
 
@@ -589,8 +608,10 @@ void ProcessLine(char const* line)
     // no memory error test 
     if (expr_in == NULL )
     {
-        printf("ERROR: Memory Not Enough \n");     
+        *lastError_t = ERR_NOT_ENOUGH_MEMORY;
+        // printf("ERROR: Memory Not Enough \n");     
         free(expr_in);
+        retrun;
     }
 
     strcpy(expr_in,line);
@@ -599,7 +620,8 @@ void ProcessLine(char const* line)
 
     printf("%s == ", expr_in);
 
-//	free(expr_in);这里有问题需要解决
+    // 为什么注释掉这一行 ？
+	free(expr_in); //这里有问题需要解决
 
     // if (NeedCalculate( line, strlen(line)))
         result = Calculate(line, lastError_t);
@@ -612,50 +634,50 @@ void ProcessLine(char const* line)
         ReportError(lastError);
 }
 
-// int main(int argc, char const* argv[])
-// {
-//   FILE* in = stdin;
-//   char* line = NULL;
-
-// //Private part
-//   int len = 0;
-//   int* len_p = &len;
- 
-
-// // Choose an input source
-//   if (argc > 1 && (in = fopen(argv[1], "r")) == NULL)
-//   {
-//     printf("ERROR: Cannot open file '%s'", argv[1]);
-//     return -1;
-//   }
-
-//  // Process the data line by line
-//   while ((line = ReadLine(in, len_p)) != NULL || Statut_File == END_FILE)
-//   {
-	
-// 	  if(NeedCalculate(line, len))
-// 		 ProcessLine(line);
-
-//       free(line);
-//   }
-// //结尾处最后一行的处理
-//   if(Statut_File == END_FILE)
-// 	  if(NeedCalculate(line, len))
-// 		 ProcessLine(line);
-// 	  free(line);
-
-//  // Clean up
-//   if (in != stdin)
-//     fclose(in);
-//   return 0;
-// }
-
 int main(int argc, char const* argv[])
 {
-  	char line[] = "60+100/200*lnsqrt(arctg6^2)/(3*arcsincos2)";
+  FILE* in = stdin;
+  char* line = NULL;
 
-	ProcessLine(line);
-	// free(line);
-    getchar();
-	return 0;
+//Private part
+  int len = 0;
+  int* len_p = &len;
+ 
+
+// Choose an input source
+  if (argc > 1 && (in = fopen(argv[1], "r")) == NULL)
+  {
+    printf("ERROR: Cannot open file '%s'", argv[1]);
+    return -1;
+  }
+
+ // Process the data line by line
+  while ((line = ReadLine(in, len_p)) != NULL || Statut_File == END_FILE)
+  {
+	
+	  if(NeedCalculate(line, len))
+		 ProcessLine(line);
+
+      free(line);
+  }
+//结尾处最后一行的处理
+  if(Statut_File == END_FILE)
+	  if(NeedCalculate(line, len))
+		 ProcessLine(line);
+	  free(line);
+  
+ // Clean up
+  if (in != stdin)
+    fclose(in);
+  return 0;
 }
+
+// int main(int argc, char const* argv[])
+// {
+//     char line[] = "60+100/200*ln sqrt(arctg6^2)/(3*arcsincos2)-";
+
+// 	ProcessLine(line);
+// 	// free(line);
+//     getchar();
+// 	return 0;
+// }
