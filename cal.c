@@ -114,6 +114,10 @@ int isDigit(char *op)
             );
 }
 
+int isAlphabet(char op)  // 字母
+{
+    return (op >='a' && op<='z');
+}
 //判断输入串中的字符是不是操作符，如果是返回 1 
 int isOperator(char op)                
 {  
@@ -141,6 +145,7 @@ funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
                             "floor",    'K',    //10
                             "ceil",     'L'     //11
 };
+// "60+100/200*lnsqrt(arctg6^2)/(3*arcsincos2)"
 // ---------------------end---------------------------------
 
 int isFunction(char* op)
@@ -187,7 +192,7 @@ void fun2sym(char *expr, error_t *error)
             for( i =strlen(funName[tmp].name); i>1; i--)
                 *(++expr) = ' ';
         }
-        else
+        else if(isAlphabet(*expr) && *expr != 'e')
         {
             // error;
 			printf("wrong expression");
@@ -260,7 +265,7 @@ void Polish (char const*s, char *output, error_t* error)
     strcpy(expr_in,s);
     // printf("\nPolish expr_in = %s",expr_in);
     fun2sym(expr_in, error);
-	if(*error == ERR_OK)
+    if(*error != ERR_OK)
 		return;
     memset(output,'\0',sizeof output);  //输出串  
     while(*expr_in != '\0')               //1）  
@@ -362,11 +367,10 @@ double Calculate(char const* expr_in, error_t* error)
 	
 	while ( *(expr+i) )  
 	{  
-		// printf( "\ns = %s ", (expr+i));
+		printf( "\ns = %s ", (expr+i));
 		if (*(expr+i) != ' ')  
 		{  
 			sscanf((expr+i),"%s",dst);  
-			// printf("\n, %d ",dst,isDigit(dst));
 			if (isDigit(dst))  
 			{  
 				++top1;  
@@ -375,22 +379,19 @@ double Calculate(char const* expr_in, error_t* error)
 			else if(isOperator(*dst))
 			{  
 				
-				// printf("\n %f %c %f=",cSt[top1-1], dst[0], cSt[top1]);
+				printf("\n %f %c %f=",cSt[top1-1], dst[0], cSt[top1]);
 				cSt[top1-1] = OP( cSt[top1-1], cSt[top1], dst[0], error); 
-				// printf("%f",cSt[top1-1]); 
+				printf("%f",cSt[top1-1]); 
 				--top1;     //操作数栈：出栈俩，进栈一 
 			}
 			else if(isSymFunction(*dst))
 			{
-				// printf("\n %c %f=", dst[0], cSt[top1]);
+				printf("\n %c %f=", dst[0], cSt[top1]);
 				cSt[top1] = OP( 0, cSt[top1], dst[0], error); 
-				// printf("%f",cSt[top1]); 
+				printf("%f",cSt[top1]); 
 			}
 			while (*(expr+i) && *(expr+i) != ' ')  
-			{
-				// printf("p = %p\n",(expr+i));
-				++i;
-			}  
+			    ++i;
 		}
 		++i;  
 	}
