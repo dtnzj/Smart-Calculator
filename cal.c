@@ -28,7 +28,9 @@
 //  但是经过检查，出错的free对应的指针都没有被修改过，
 //  因此考虑是不是编译器自动添加了free函数，导致其被重复调用而出错，
 //  暂时将free注释掉，忽略该问题
-//3. see line 40
+//3. see line 40 （这个没懂啥意思）
+//4. 尽量把可以不用动态变量的地方替换掉，并且在进行指针操作是谨慎的检查
+//5. 可以的话吧函数传参时候的变量名尽量改成一致的，不会造成误解。
 /****************************END****************************************/
 
 
@@ -38,13 +40,14 @@
 
 
 // Question :so what your meaning to built this enum ?
+//629行，主函数判断文件结尾时候需要用，因为识别到函数到结尾了，Read之后跳出循环还需要在进行最后一次的处理
 typedef enum
 {
 	NORMAL,
 	END_LINE,
 	END_FILE,
 	NO_MEMORY,              //question 这里为什么要放no memory ? 岂不是跟 error_t 打架了 ？
-}statut_t;
+}statut_t;//所以最开始时候说是不是要把状态变量的参数和报错的合并，因为有些交集，多用一个变量会更麻烦
 statut_t Statut_File = NORMAL;
 
 // TODO: Move to a separate module 'calc'
@@ -168,7 +171,7 @@ char *strlwrt(char *str)
 
 
 // 将字符串中的数学函数转换为对应的字母代号
-void fun2sym(char *expr)
+void fun2sym(char *expr, error_t *error)
 {
     int tmp ;
     int i;
@@ -187,6 +190,9 @@ void fun2sym(char *expr)
         else
         {
             // error;
+			printf("wrong expression");
+			*error = ERR_OTHER;
+			return;
         }
         ++expr;
     }
@@ -237,12 +243,11 @@ double OP(double op1,double op2,char op, error_t *error)
 void Polish (char const*s, char *output, error_t* error)
 {  
     unsigned int outLen = 0;  
-    unsigned int top;           //stack count
+    unsigned int top = 0;           //stack count
 
     char *stack = (char*)malloc( strlen(s) * sizeof(char));
     char *expr_in = (char*)malloc( strlen(s) * sizeof(char));
-    int i;
-    
+
     // no memory error test 
     if (stack == NULL || expr_in == NULL )
     {
@@ -250,12 +255,13 @@ void Polish (char const*s, char *output, error_t* error)
         *error = ERR_NOT_ENOUGH_MEMORY;
         free(stack);
         free(expr_in);
-        return 0;
     }
 
     strcpy(expr_in,s);
     // printf("\nPolish expr_in = %s",expr_in);
-    fun2sym(expr_in);
+    fun2sym(expr_in, error);
+	if(*error == ERR_OK)
+		return;
     memset(output,'\0',sizeof output);  //输出串  
     while(*expr_in != '\0')               //1）  
     {  
@@ -503,8 +509,8 @@ int NeedCalculate(char const* line, int len)
 			return 0;
 		}
 //是否有特殊操作符
-		if (!((line[counter] == '\a') || (line[counter] == '\b') || (line[counter] == '\t') || (line[counter] == '\n') || \
-			(line[counter] == '\v') || (line[counter] == '\r') || (line[counter] == '\f')))
+		if ((line[counter] == '\a') || (line[counter] == '\b') || (line[counter] == '\t') || \
+			(line[counter] == '\v') || (line[counter] == '\r') || (line[counter] == '\f'))
 			spesym = FALSE;
 //判断结尾是否为数字
 		if(line[counter]>47 && line[counter]<58)
@@ -553,10 +559,12 @@ int NeedCalculate(char const* line, int len)
 		}
 //先测试这两个可以用的话，在复制
 	}while(line[++counter] != '\0');
+//	printf("brk = %d,lastch = %d, specsym = %d \n", brk, lastch, spesym);
 //长度错误
 	if(counter != len){printf("Lenth Error\n");return 0;}
 //括号数量错误
-	if(brk != 0 || lastch == FALSE || spesym == FALSE){printf("Wrong expression\n");return 0;}
+	if(brk != 0 || spesym == FALSE || statut == FALSE){printf("Wrong expression\n");return 0;}
+	if(lastch == FALSE){printf("Wrong expression\n");return 0;}
 
     return 1;
 }
@@ -574,8 +582,24 @@ void ProcessLine(char const* line)
     double result;
     error_t lastError = ERR_OK;
     error_t *lastError_t = &lastError;
+	int i = 0;
+	 char *expr_in = (char*)malloc( strlen(line) * sizeof(char));
 
-    printf("%s == ", line);
+    // no memory error test 
+    if (expr_in == NULL )
+    {
+        printf("ERROR: Memory Not Enough \n");     
+        free(expr_in);
+    }
+
+    strcpy(expr_in,line);
+	i = strlen(expr_in);
+	expr_in[i -1] = '\0';
+
+    printf("%s == ", expr_in);
+
+//	free(expr_in);这里有问题需要解决
+
     // if (NeedCalculate( line, strlen(line)))
         result = Calculate(line, lastError_t);
         
@@ -586,6 +610,44 @@ void ProcessLine(char const* line)
     else
         ReportError(lastError);
 }
+
+// int main(int argc, char const* argv[])
+// {
+//   FILE* in = stdin;
+//   char* line = NULL;
+
+// //Private part
+//   int len = 0;
+//   int* len_p = &len;
+ 
+
+// // Choose an input source
+//   if (argc > 1 && (in = fopen(argv[1], "r")) == NULL)
+//   {
+//     printf("ERROR: Cannot open file '%s'", argv[1]);
+//     return -1;
+//   }
+
+//  // Process the data line by line
+//   while ((line = ReadLine(in, len_p)) != NULL || Statut_File == END_FILE)
+//   {
+	
+// 	  if(NeedCalculate(line, len))
+// 		 ProcessLine(line);
+
+//       free(line);
+//   }
+// //结尾处最后一行的处理
+//   if(Statut_File == END_FILE)
+// 	  if(NeedCalculate(line, len))
+// 		 ProcessLine(line);
+// 	  free(line);
+
+//  // Clean up
+//   if (in != stdin)
+//     fclose(in);
+//   return 0;
+// }
 
 int main(int argc, char const* argv[])
 {
