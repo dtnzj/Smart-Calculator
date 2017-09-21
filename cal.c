@@ -19,6 +19,9 @@
 //4. 有任何需求或问题写在Questions区域内进行讨论和研究；
 //5. 类型的定义尽量写清注释；
 //6. 变量命名方式以方便阅读为主要目的，编码风格协调一致；
+//7. 把NeedCalculate中对括号和字母判断的命令注释掉了，在后面的fun2sym中可以完成同样的功能，
+//      然后把表达式的打印部分代码做了相应的调整。
+//8. 解决了如果空行是\n的情况导致的bug
 /*******************************END*************************************/
 
 
@@ -28,10 +31,9 @@
 //  但是经过检查，出错的free对应的指针都没有被修改过，
 //  因此考虑是不是编译器自动添加了free函数，导致其被重复调用而出错，
 //  暂时将free注释掉，忽略该问题
-//3. see line 40 （这个没懂啥意思）
 //4. 尽量把可以不用动态变量的地方替换掉，并且在进行指针操作是谨慎的检查
 //5. 可以的话吧函数传参时候的变量名尽量改成一致的，不会造成误解。
-//6. see line 411
+
 /****************************END****************************************/
 
 
@@ -70,9 +72,6 @@ char const* GetErrorString(error_t error)
     // TODO: Find the corresponding error description
     switch(error)
     {
-        case ERR_OK: 
-            errorStr = "No Error";
-            break;
         case ERR_NOT_ENOUGH_MEMORY:
             errorStr = "ERR_NOT_ENOUGH_MEMORY";
             break;
@@ -81,7 +80,12 @@ char const* GetErrorString(error_t error)
             break;
         case ERR_OTHER:
             errorStr = "Unkown Error";
-            break;        
+            break;      
+		case ERR_OK:
+		default:
+			errorStr = "No Error";
+			break;
+
     }
     return errorStr;
 }
@@ -148,7 +152,7 @@ int isOperator(char op)
 }  
 
 //在此定义了改程序支持的所有数学函数，及其代号
-#define FUNMAX 13   //程序支持的所有数学函数个数
+#define FUNMAX 20   //程序支持的所有数学函数个数
 typedef struct
 {
     char name[7];
@@ -157,14 +161,21 @@ typedef struct
 funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
                             "cos",      'B',    //2
                             "tg",       'C',    //3
-                            "tan",       'C',    //3
+                            "tan",      'C',    //3
                             "ctg",      'D',    //4
-                            "ctan",      'D',    //4
+                            "cot",      'D',    //4
+                            "ctan",     'D',    //4
+                            "asin",     'F',    //5
                             "arcsin",   'F',    //5
+                            "acos",     'G',    //6
                             "arccos",   'G',    //6
                             "arctg",    'H',    //7
+                            "arctan",   'H',    //7
+                            "atan",     'H',    //7
                             "sqrt",     'I',    //8
                             "ln",       'J',    //9
+                            "log",      'J',    //9
+                            "lg",       'J',    //9
                             "floor",    'K',    //10
                             "ceil",     'L'     //11
 };
@@ -273,9 +284,9 @@ void Polish (char const*s, char *output, error_t* error)
     unsigned int outLen = 0,i=0;  
     unsigned int top = 0;           //stack count
 
-    char *stack = (char*)malloc( strlen(s) * sizeof(char));
-    char *expr_in = (char*)malloc( strlen(s) * sizeof(char));
-    
+    char *stack = (char*)malloc( 2*strlen(s) * sizeof(char));
+    char *expr_in = (char*)malloc( 4*strlen(s) * sizeof(char));
+	//printf("\nstack len == %d", 2 * strlen(s) * sizeof(char));
     // no memory error test 
     if (stack == NULL || expr_in == NULL )
     {
@@ -294,7 +305,8 @@ void Polish (char const*s, char *output, error_t* error)
     memset(output,'\0',strlen(output) *sizeof (char));  //输出串  
     while(*(expr_in+i))               //1）  
     {  
-        if (isDigit(expr_in+i))              
+		//printf("\ntop = %d", top);
+		if (isDigit(expr_in+i))              
         {
             output[outLen++] = *(expr_in+i);        //3）假如是操作数，把它添加到输出串中。  
             while( *(expr_in+i+1) !='\0' && isDigit( expr_in+i +1 ))
@@ -343,8 +355,8 @@ void Polish (char const*s, char *output, error_t* error)
         output[outLen++] = ' ';  
         --top;  
 	}
-    free(stack); 
-    free(expr_in); 
+    // free(stack); 
+    // free(expr_in); 
     
 }  
 
@@ -365,13 +377,13 @@ void Polish (char const*s, char *output, error_t* error)
 // 		error :错误码输出码指针
 // 输出：		表达式计算结果
 // TODO: Move to a separate module 'calc'
-double Calculate(char const* expr_in, error_t* error)	
+double Calculate(char const* expr_in, error_t* error)
 {
 	double result;
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
-    char *expr= (char*)malloc(2*strlen(expr_in) * sizeof(char));
-    char *dst = (char*)malloc( 20 * sizeof(char));  
-    double* cSt = (double*)malloc( sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
+    char *expr= (char*)malloc(4*strlen(expr_in) * sizeof(char));
+    char *dst = (char*)malloc( 200 * sizeof(char));  
+    double *cSt = (double*)malloc( 4*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     unsigned int top1=0,i=0;  
     
     // char *cSt = p;
@@ -392,7 +404,7 @@ double Calculate(char const* expr_in, error_t* error)
 	
 	while ( *(expr+i) )  
 	{  
-		// printf( "\ns = %s ", (expr+i));
+		//printf( "\ns = %s ", (expr+i));
 		if (*(expr+i) != ' ')  
 		{  
 			sscanf((expr+i),"%s",dst);  
@@ -422,17 +434,15 @@ double Calculate(char const* expr_in, error_t* error)
 	}
 
     result = cSt[1];
-    
-    free(cSt);
-    cSt = NULL;
-    free(dst);
-    dst = NULL;
-    free(expr);
-    expr = NULL;
-    
-    // what that code means ?
-	// if (error == NULL)
-    // 	*error = ERR_OK;
+    // free(cSt);
+    // cSt = NULL;
+    // free(dst);
+    // dst = NULL;
+    // free(expr);
+    //expr = null;
+	// what that code means ?
+	 if (error == NULL)
+     	*error = ERR_OK;
 
 	return result;
 }
@@ -476,7 +486,8 @@ char* ReadLine(FILE* in, int* len)
 	if(temp == EOF || temp == 26)
 	{   
 //遇到的文件为空文件
-		if(*len == 0){
+        if(*len == 0)
+        {
 			if(line != NULL)
 				free(line);
 			return NULL;//这种情况可以直接结束返回
@@ -520,14 +531,15 @@ char* ReadLine(FILE* in, int* len)
 int NeedCalculate(char const* line, int len)
 {
 	int brk = 0, counter = 0, spesym = TRUE;
-	char lastch = TRUE, statut = TRUE;
+	char lastch = TRUE;
 
-	if(line[counter] == '\0')//空行
+	if(line[counter] == '\0' || line[counter] == '\n')//空行
 		return 0;
 //检查
 	do
 	{
-		if(line[0] == '/' && line[1] == '/')//注释行
+        //个别情况下，输入文件会在这里直接换行，因此空行也可能是\n
+        if(line[0] == '/' && line[1] == '/')//注释行
 		{
 			printf("%s", line);
 			return 0;
@@ -537,58 +549,24 @@ int NeedCalculate(char const* line, int len)
 			(line[counter] == '\v') || (line[counter] == '\r') || (line[counter] == '\f'))
 			spesym = FALSE;
 //判断结尾是否为数字
-		if(line[counter]>47 && line[counter]<58)
-			lastch = TRUE;
-		else if(line[counter]!='\n' && line[counter]!=' ' && line[counter] != '(' && line[counter] != ')')
-			lastch = FALSE;
+		// if(line[counter]>47 && line[counter]<58)
+		// 	lastch = TRUE;
+		// else if(line[counter]!='\n' && line[counter]!=' ' && line[counter] != '(' && line[counter] != ')')
+		// 	lastch = FALSE;
 //判断括号数量是否吻合
-		if(line[counter] == '(')
-			brk++;
-		if(line[counter] == ')')
-			brk--;
-//是否有连续的操作符
-//sin
-		if(line[counter] == 's'){
-			if( line[counter+1] == 'i' && line[counter+2] == 'n' && ((line[counter+3]>47 &&line[counter]<58) || line[counter+3]==' ' || line[counter+3] == '(')){
-				if(line[counter+3] == ' '){//判断sin   5类似的格式
-					int i = 4;
-					statut = FALSE;
-					do{//跳过空格
-						if(line[counter+i] != ' ' )
-							i++;
-						else if((line[counter+i] >47&&line[counter+i]<58)||line[counter+i] == '(' ){counter += i;statut = TRUE;break;}
-						else{printf("Error symbol\n");return FALSE;} //这里需要改
-					}while(line[counter+i] != '\n' && line[counter+i] != '\0');
-					if(statut == FALSE){lastch = FALSE;break;}//判断以sin     结尾的格式
-
-				}
-			}
-		}
-//cos
-		if(line[counter] == 'c'){
-			if( line[counter+1] == 'o' && line[counter+2] == 's' && ((line[counter+3]>47 &&line[counter]<58) || line[counter+3]==' ' || line[counter+3] == '(')){
-				if(line[counter+3] == ' '){//判断sin   5类似的格式
-					int i = 4;
-					statut = FALSE;
-					do{//跳过空格
-						if(line[counter+i] != ' ' )
-							i++;
-						else if((line[counter+i] >47&&line[counter+i]<58)||line[counter+i] == '(' ){counter += i;statut = TRUE;break;}
-						else{printf("Error symbol\n");return FALSE;} //这里需要改
-					}while(line[counter+i] != '\n' && line[counter+i] != '\0');
-					if(statut == FALSE){lastch = FALSE;break;}//判断以sin     结尾的格式
-
-				}
-			}
-		}
+		// if(line[counter] == '(')
+		// 	brk++;
+		// if(line[counter] == ')')
+		// 	brk--;
+		
 //先测试这两个可以用的话，在复制
 	}while(line[++counter] != '\0');
 //	printf("brk = %d,lastch = %d, specsym = %d \n", brk, lastch, spesym);
 //长度错误
 	if(counter != len){printf("Lenth Error\n");return 0;}
 //括号数量错误
-	if(brk != 0 || spesym == FALSE || statut == FALSE){printf("Wrong expression\n");return 0;}
-	if(lastch == FALSE){printf("Wrong expression\n");return 0;}
+	// if(brk != 0 || spesym == FALSE){printf("Wrong expression\n");return 0;}
+	// if(lastch == FALSE){printf("Wrong expression\n");return 0;}
 
     return 1;
 }
@@ -599,85 +577,93 @@ int NeedCalculate(char const* line, int len)
 
 void ProcessLine(char const* line)
 {
-    double result;
+    double result = 0;
     error_t lastError = ERR_OK;
-    error_t *lastError_t = &lastError;
+    // error_t *lastError_t = &lastError;
 	int i = 0;
-	 char *expr_in = (char*)malloc( strlen(line) * sizeof(char));
-
-    // no memory error test 
+	//char *expr_in = NULL;
+	char *expr_in = (char*)malloc( 2*strlen(line) * sizeof(char));
+	//expr_in = p;
+	// printf("\nstrlen(line) == %d", strlen(p));
+	// printf("\nstrlen(p) == %d", strlen(line) * sizeof(char));
+	 // no memory error test 
     if (expr_in == NULL )
     {
-        *lastError_t = ERR_NOT_ENOUGH_MEMORY;
+        lastError = ERR_NOT_ENOUGH_MEMORY;
         // printf("ERROR: Memory Not Enough \n");     
+        ReportError(lastError);
         free(expr_in);
-        retrun;
+        return;
     }
-
+	//printf("\nbefore strlen(p) == %d", strlen(expr_in));
     strcpy(expr_in,line);
+	//printf("\nafter  strlen(p) == %d", strlen(expr_in));
+
 	i = strlen(expr_in);
 	expr_in[i -1] = '\0';
 
-    printf("%s == ", expr_in);
-
-    // 为什么注释掉这一行 ？
-	free(expr_in); //这里有问题需要解决
-
-    // if (NeedCalculate( line, strlen(line)))
-        result = Calculate(line, lastError_t);
+    
+    // printf("\n%s\n", expr_in);        
+    
+    result = Calculate(line, &lastError);
         
     if (lastError == ERR_OK)
     {
-         printf("\n%lg\n", result);
+        printf("%s == ", expr_in);        
+        printf("%lg\n", result);
     }
     else
         ReportError(lastError);
+    
+    // 为什么注释掉这一行 ？
+	// free(expr_in); //这里有问题需要解决
+
 }
 
 int main(int argc, char const* argv[])
 {
-  FILE* in = stdin;
-  char* line = NULL;
+    FILE* in = stdin;
+    char* line = NULL;
 
-//Private part
-  int len = 0;
-  int* len_p = &len;
- 
+    //Private part
+    int len = 0;
+    int* len_p = &len;
+    
 
-// Choose an input source
-  if (argc > 1 && (in = fopen(argv[1], "r")) == NULL)
-  {
-    printf("ERROR: Cannot open file '%s'", argv[1]);
-    return -1;
-  }
+    // Choose an input source
+    if (argc > 1 && (in = fopen(argv[1], "r")) == NULL)
+    {
+        printf("ERROR: Cannot open file '%s'", argv[1]);
+        return -1;
+    }
 
- // Process the data line by line
-  while ((line = ReadLine(in, len_p)) != NULL || Statut_File == END_FILE)
-  {
-	
-	  if(NeedCalculate(line, len))
-		 ProcessLine(line);
+    // Process the data line by line
+    while ((line = ReadLine(in, len_p)) != NULL || Statut_File == END_FILE)
+    {
+        
+        if(NeedCalculate(line, len))
+            ProcessLine(line);
 
-      free(line);
-  }
-//结尾处最后一行的处理
-  if(Statut_File == END_FILE)
-	  if(NeedCalculate(line, len))
-		 ProcessLine(line);
-	  free(line);
-  
- // Clean up
-  if (in != stdin)
-    fclose(in);
-  return 0;
+        free(line);
+    }
+    //结尾处最后一行的处理
+    // if(Statut_File == END_FILE)
+    //     if(NeedCalculate(line, len))
+    //         ProcessLine(line);
+    // free(line);
+
+    // Clean up
+    if (in != stdin)
+        fclose(in);
+    return 0;
 }
 
-// int main(int argc, char const* argv[])
-// {
-//     char line[] = "60+100/200*ln sqrt(arctg6^2)/(3*arcsincos2)-";
+//  int main(int argc, char const* argv[])
+//  {
+//      char line[] = "60+100/200*ln sqrt(arctg6^2)/(3*arcsincos2)";
 
-// 	ProcessLine(line);
-// 	// free(line);
-//     getchar();
-// 	return 0;
-// }
+//  	ProcessLine(line);
+//  	// free(line);
+//      getchar();
+//  	return 0;
+//  }
