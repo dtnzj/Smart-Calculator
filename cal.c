@@ -64,7 +64,6 @@ typedef enum
   
   // TODO: Add your own error codes
 } error_t;
-//error_t error = ERR_OK;
 
 // TODO: Move to a separate module 'calc'
 char const* GetErrorString(error_t error)
@@ -149,7 +148,7 @@ int isAlphabet(char op)  // 字母
 //判断输入串中的字符是不是操作符，如果是返回 1 
 int isOperator(char op)                
 {  
-    return (op=='+' || op=='-' || op=='*' || op=='/' || op=='^' || op=='~');  
+    return (op=='+' || op=='-' || op=='*' || op=='/' || op=='^');  
 }  
 
 //在此定义了改程序支持的所有数学函数，及其代号
@@ -180,8 +179,6 @@ funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
                             "floor",    'K',    //10
                             "ceil",     'L'     //11
 };
-// "60+100/200*lnsqrt(arctg6^2)/(3*arcsincos2)"
-// ---------------------end---------------------------------
 
 int isFunction(char* op)
 {
@@ -229,8 +226,6 @@ void fun2sym(char *expr, error_t *error)
         }
         else if(isAlphabet(*expr) && *expr != 'e')
         {
-            // error;
-			// printf("wrong expression");
 			*error = ERR_WRONG_EXPRESSION;
 			return;
         }
@@ -239,7 +234,6 @@ void fun2sym(char *expr, error_t *error)
 }
 
 
-// 2017/9/18
 //	根据给定操作符和操作数求解计算结果
 double OP(double op1,double op2,char op, error_t *error)  
 {  
@@ -251,6 +245,7 @@ double OP(double op1,double op2,char op, error_t *error)
         case '-': res = op1 - op2; break;
         case '*': res = op1 * op2; break;
         case '/': res = op1 / op2; break;
+        case '~': res =      -op2; break;
         case '^': res =   pow(op1, op2); break;
         case 'A': res =   sin(op2); break;
         case 'B': res =   cos(op2); break;
@@ -268,13 +263,35 @@ double OP(double op1,double op2,char op, error_t *error)
     return res;  
 }  
 
+// 函数功能：    字符串复制，并去除空格
+// 输入参数：	输入字符串
+// 输出参数：	输出字符串
+void copyExpr(char *a, char *b)
+{
+    while(*b != '\0')
+    {
+        if (*b != ' ') 
+            *a++ = *b;
+        b++;
+    }
+}
+// 函数功能：    区分表达式中的负号，将其转换为~
+// 输入参数：	表达式字符串
+// 输出参数：	经过转换的字符串
+void minus2negative(char *expr)
+{
+    int i=0;
+    
+    if (expr[i] == '-') expr[i++] = '~';
+    while( expr[i] )
+    {
+        if ( expr[i] == '-' )
+            if ( !isDigit( &expr[i-1]) && expr[i-1]!=')' )
+                expr[i] = '~';
+        ++i;
+    }
+}
 
-// 2017/9/20 by nzj
-// stack is stack, it is not the input string
-// add the error test codes
-// 2017/9/19
-// 目前这个函数传参混乱；引入的报错参数有BUG，先删掉了
-// 2017/9/18
 // 当前不具备错误码输入输出功能。
 // 函数功能：　	将常规中缀表达式转换为逆波兰（后缀）表达式
 // 输入参数：	s 	包含中缀表达式的字符串,其中所有函数使用 funName 中对应的大写字母表示，且不含有任何其他字母。
@@ -296,18 +313,18 @@ void Polish (char const*s, char *output, error_t* error)
         free(expr_in);
         return;
     }
-	
-	strcpy(expr_in,s);
+    copyExpr(expr_in,s);
+    minus2negative(expr_in);
+    fun2sym(expr_in, error);
     
-	fun2sym(expr_in, error);
     if(*error != ERR_OK)
         return;
     
-	//如果output申请时，空间中不包含\0，那么计算的时候很可能会超出指定的容量最终报错
+        //如果output申请时，空间中不包含\0，那么计算的时候很可能会超出指定的容量最终报错
 	//memset(output,'\0',strlen(output) *sizeof (char));  //输出串  
     while(*(expr_in+i))               //1）  
     {  
-		//printf("\noutLen = %d", outLen);
+		//printf("\ntop = %d", top);
 		if (isDigit(expr_in+i))              
         {
             output[outLen++] = *(expr_in+i);        //3）假如是操作数，把它添加到输出串中。  
@@ -318,7 +335,7 @@ void Polish (char const*s, char *output, error_t* error)
             }  
             output[outLen++] = ' ';     //空格隔开  
         }
-        if (*(expr_in+i)=='(' || isSymFunction(*(expr_in+i)))                  //4）假如是闭括号，将它压栈。  
+        if (*(expr_in+i)=='(' || isSymFunction(*(expr_in+i)) || *(expr_in+i) == '~')   //4）假如是闭括号，将它压栈。  
         {  
             ++top;  
             stack[top] = *(expr_in+i);  
@@ -357,7 +374,7 @@ void Polish (char const*s, char *output, error_t* error)
         output[outLen++] = ' ';  
         --top;  
 	}
-	output[outLen] = '\0';
+    output[outLen] = '\0';
     free(stack); 
     stack = NULL;
     free(expr_in); 
@@ -369,12 +386,6 @@ void Polish (char const*s, char *output, error_t* error)
 
 //////////////////////////////////////////////////////////////////////////////
 // Dummy calc module
-
-// 2017/9/20
-// add the error test codes 
-// 2017/9/18
-// 添加的已完成的calculate 函数 
-// 当前不具备错误码输入输出功能。
 
 // 功能： 求解逆波兰表达式计算结果
 // 输入：expr	:逆波兰表达式字符串
@@ -390,8 +401,6 @@ double Calculate(char const* expr_in, error_t* error)
     double *cSt = (double*)malloc( 2*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     unsigned int top=0,i=0;  
     
-	//printf("\nexpr= %d, dst= %d, cSt= %d\n",40*strlen(expr_in) * sizeof(char), 100 * sizeof(char), 40*sizeof(double)*strlen(expr_in));
-    // char *cSt = p;
     // no memory error test 
     if (expr == NULL || dst == NULL ||cSt == NULL )
     {
@@ -403,13 +412,13 @@ double Calculate(char const* expr_in, error_t* error)
         return 0;
     }
     Polish (expr_in, expr, error);
-	// if the polish function gives error status
+    // if the polish function gives error status
     if (*error != ERR_OK)
         return 0;
 	
 	while ( *(expr+i) )  
 	{  
-		//printf( "\ni = %d, top= %d ", i, top);
+		//printf( "\ns = %s ", (expr+i));
 		if (*(expr+i) != ' ')  
 		{  
 			sscanf((expr+i),"%s",dst);  
@@ -426,7 +435,7 @@ double Calculate(char const* expr_in, error_t* error)
 				// printf("%f",cSt[top-1]); 
 				--top;     //操作数栈：出栈俩，进栈一 
 			}
-			else if(isSymFunction(*dst))
+			else if(isSymFunction(*dst)  || *dst=='~')
 			{
 				// printf("\n %c %f=", dst[0], cSt[top]);
 				cSt[top] = OP( 0, cSt[top], dst[0], error); 
@@ -453,18 +462,11 @@ double Calculate(char const* expr_in, error_t* error)
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// UI functions
 
-//parameters: FILE, sizeofline
-//function: To read the line of messages from the stdin
-//return： The first address of the messages which be read
-//the types of errors are included at here: 
-//date: 2017-9-17 02:45:35
-//需要决策的设计：
-//在这里需要对内存不足，内存溢出，行结尾，文件结尾，以及正常状态进行判断，如前述，是否使用同一标识符表示？
-//一种方法是设计一个状态变量类型，在需要用到的函数体内创建相应的状态变量，否则单一使用一个全局变量来进行判断，其数量不足以满足判断需求。
-//为了解决上述问题，是否取消全局变量而只使用相应状态变量类型来创建需要的变量。
-//该功能实现并不困难，关键先统一表示法。需要自行设计。
+// 功能： 从标准输入读取字符
+// 输入：in： 文件指针
+// 		 *len： 字符串长度指针
+// 输出：		返回动态分配后字符串首地址
 char* ReadLine(FILE* in, int* len)
 {
   char* line = (char*)malloc(2*sizeof(char));
@@ -524,22 +526,24 @@ char* ReadLine(FILE* in, int* len)
   return line;
 }
 
-//parameters: string, len
-//function: whether need to calculate
-//return： True or False
-//the types of errors are included at here: 
-//
-//在完成读功能后，参考设计需求和其他程序进行设计
-//15行以内解决
-//需要判断内容：是否含有非法参数，括号数量是否正好，是否以算术符结尾，
-//这里需要讨论能否对sin cos等功能进行判断以及判断方法
+// 功能： 初步判断计算需要
+// 输入：line: 字符串
+// 		len：字符串长度 
+// 输出：是否需要计算
 int NeedCalculate(char const* line, int len)
 {
-	int brk = 0, counter = 0, spesym = TRUE;
+	int counter = 0, spesym = TRUE;
 	char lastch = TRUE;
-
-	if(line[counter] == '\0' || line[counter] == '\n')//空行
-		return 0;
+    
+    // remove the spaces
+    while(line[counter] == ' ')
+        counter++; 
+    
+    if(line[counter] == '\0' || line[counter] == '\n')//空行
+    {  
+        printf("%s", line);        
+        return 0;
+    }
 //检查
 	do
 	{
@@ -554,24 +558,17 @@ int NeedCalculate(char const* line, int len)
 			(line[counter] == '\v') || (line[counter] == '\r') || (line[counter] == '\f'))
 			spesym = FALSE;
 //判断结尾是否为数字
-		// if(line[counter]>47 && line[counter]<58)
-		// 	lastch = TRUE;
-		// else if(line[counter]!='\n' && line[counter]!=' ' && line[counter] != '(' && line[counter] != ')')
-		// 	lastch = FALSE;
-//判断括号数量是否吻合
-		// if(line[counter] == '(')
-		// 	brk++;
-		// if(line[counter] == ')')
-		// 	brk--;
-		
-//先测试这两个可以用的话，在复制
+		 if(line[counter]>47 && line[counter]<58)
+		 	lastch = TRUE;
+		 else if(line[counter]!='\n' && line[counter]!=' ' && line[counter] != '(' && line[counter] != ')')
+		 	lastch = FALSE;
 	}while(line[++counter] != '\0');
-//	printf("brk = %d,lastch = %d, specsym = %d \n", brk, lastch, spesym);
+
 //长度错误
 	if(counter != len){printf("Lenth Error\n");return 0;}
 //括号数量错误
-	// if(brk != 0 || spesym == FALSE){printf("Wrong expression\n");return 0;}
-	// if(lastch == FALSE){printf("Wrong expression\n");return 0;}
+	 if(spesym == FALSE){printf("Wrong expression\n");return 0;}
+	 if(lastch == FALSE){printf("Wrong expression\n");return 0;}
 
     return 1;
 }
@@ -586,29 +583,24 @@ void ProcessLine(char const* line)
     error_t lastError = ERR_OK;
     // error_t *lastError_t = &lastError;
 	int i = 0;
-	//char *expr_in = NULL;
+	
 	char *expr_in = (char*)malloc( 2*strlen(line) * sizeof(char));
-	//expr_in = p;
-	// printf("\nstrlen(line) == %d", strlen(p));
-	// printf("\nstrlen(p) == %d", strlen(line) * sizeof(char));
 	 // no memory error test 
     if (expr_in == NULL )
     {
-        lastError = ERR_NOT_ENOUGH_MEMORY;
-        // printf("ERROR: Memory Not Enough \n");     
+        lastError = ERR_NOT_ENOUGH_MEMORY;    
         ReportError(lastError);
         free(expr_in);
         return;
     }
-	//printf("\nbefore strlen(p) == %d", strlen(expr_in));
     strcpy(expr_in,line);
-	//printf("\nafter  strlen(p) == %d", strlen(expr_in));
+
 
 	i = strlen(expr_in);
 	expr_in[i -1] = '\0';
 
     
-    // printf("\n%s\n", expr_in);        
+    //printf("%s", expr_in);        
     
     result = Calculate(line, &lastError);
         
@@ -620,7 +612,6 @@ void ProcessLine(char const* line)
     else
         ReportError(lastError);
     
-    // 为什么注释掉这一行 ？
 	free(expr_in); //这里有问题需要解决
 
 }
@@ -636,12 +627,16 @@ int main(int argc, char const* argv[])
     
 
     // Choose an input source
-    if (argc > 1 && (in = fopen(argv[1], "r")) == NULL)
+    if (argc == 1 )
+    {
+        in = stdin;
+    }
+    else if  ((in = fopen(argv[1], "r")) == NULL)
     {
         printf("ERROR: Cannot open file '%s'", argv[1]);
         return -1;
     }
-
+    
     // Process the data line by line
     while ((line = ReadLine(in, len_p)) != NULL || Statut_File == END_FILE)
     {
@@ -652,23 +647,13 @@ int main(int argc, char const* argv[])
         free(line);
     }
     //结尾处最后一行的处理
-    // if(Statut_File == END_FILE)
-    //     if(NeedCalculate(line, len))
-    //         ProcessLine(line);
-    // free(line);
+     if(Statut_File == END_FILE)
+         if(NeedCalculate(line, len))
+             ProcessLine(line);
+     free(line);
 
     // Clean up
     if (in != stdin)
         fclose(in);
     return 0;
 }
-
-//  int main(int argc, char const* argv[])
-//  {
-//      char line[] = "60+100/200*ln sqrt(arctg6^2)/(3*arcsincos2)";
-
-//  	ProcessLine(line);
-//  	// free(line);
-//      getchar();
-//  	return 0;
-//  }
