@@ -22,6 +22,7 @@
 //7. 把NeedCalculate中对括号和字母判断的命令注释掉了，在后面的fun2sym中可以完成同样的功能，
 //      然后把表达式的打印部分代码做了相应的调整。
 //8. 解决了如果空行是\n的情况导致的bug
+//9. 解决了free的bug，原因是memset函数如果是对一个内容随机的字符串进行清空，可能会超出字符串的空间范围
 /*******************************END*************************************/
 
 
@@ -278,14 +279,13 @@ double OP(double op1,double op2,char op, error_t *error)
 // 函数功能：　	将常规中缀表达式转换为逆波兰（后缀）表达式
 // 输入参数：	s 	包含中缀表达式的字符串,其中所有函数使用 funName 中对应的大写字母表示，且不含有任何其他字母。
 // 输出参数：	output	包含逆波兰表达式的字符串,各元素间以空格作为间隔符。
-
 void Polish (char const*s, char *output, error_t* error)
 {  
     unsigned int outLen = 0,i=0;  
     unsigned int top = 0;           //stack count
 
     char *stack = (char*)malloc( 2*strlen(s) * sizeof(char));
-    char *expr_in = (char*)malloc( 4*strlen(s) * sizeof(char));
+    char *expr_in = (char*)malloc( 2*strlen(s) * sizeof(char));
 	//printf("\nstack len == %d", 2 * strlen(s) * sizeof(char));
     // no memory error test 
     if (stack == NULL || expr_in == NULL )
@@ -296,16 +296,18 @@ void Polish (char const*s, char *output, error_t* error)
         free(expr_in);
         return;
     }
-
-    strcpy(expr_in,s);
-    // printf("\nPolish expr_in = %s",expr_in);
-    fun2sym(expr_in, error);
+	
+	strcpy(expr_in,s);
+    
+	fun2sym(expr_in, error);
     if(*error != ERR_OK)
         return;
-    memset(output,'\0',strlen(output) *sizeof (char));  //输出串  
+    
+	//如果output申请时，空间中不包含\0，那么计算的时候很可能会超出指定的容量最终报错
+	//memset(output,'\0',strlen(output) *sizeof (char));  //输出串  
     while(*(expr_in+i))               //1）  
     {  
-		//printf("\ntop = %d", top);
+		//printf("\noutLen = %d", outLen);
 		if (isDigit(expr_in+i))              
         {
             output[outLen++] = *(expr_in+i);        //3）假如是操作数，把它添加到输出串中。  
@@ -355,9 +357,11 @@ void Polish (char const*s, char *output, error_t* error)
         output[outLen++] = ' ';  
         --top;  
 	}
-    // free(stack); 
-    // free(expr_in); 
-    
+	output[outLen] = '\0';
+    free(stack); 
+    stack = NULL;
+    free(expr_in); 
+    expr_in = NULL;
 }  
 
 
@@ -379,13 +383,14 @@ void Polish (char const*s, char *output, error_t* error)
 // TODO: Move to a separate module 'calc'
 double Calculate(char const* expr_in, error_t* error)
 {
-	double result;
+	double result = 0;
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
-    char *expr= (char*)malloc(4*strlen(expr_in) * sizeof(char));
-    char *dst = (char*)malloc( 200 * sizeof(char));  
-    double *cSt = (double*)malloc( 4*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
-    unsigned int top1=0,i=0;  
+    char *expr= (char*)malloc(2*strlen(expr_in) * sizeof(char));
+    char *dst = (char*)malloc( 20 * sizeof(char));  
+    double *cSt = (double*)malloc( 2*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
+    unsigned int top=0,i=0;  
     
+	//printf("\nexpr= %d, dst= %d, cSt= %d\n",40*strlen(expr_in) * sizeof(char), 100 * sizeof(char), 40*sizeof(double)*strlen(expr_in));
     // char *cSt = p;
     // no memory error test 
     if (expr == NULL || dst == NULL ||cSt == NULL )
@@ -398,34 +403,34 @@ double Calculate(char const* expr_in, error_t* error)
         return 0;
     }
     Polish (expr_in, expr, error);
-    // if the polish function gives error status
+	// if the polish function gives error status
     if (*error != ERR_OK)
         return 0;
 	
 	while ( *(expr+i) )  
 	{  
-		//printf( "\ns = %s ", (expr+i));
+		//printf( "\ni = %d, top= %d ", i, top);
 		if (*(expr+i) != ' ')  
 		{  
 			sscanf((expr+i),"%s",dst);  
 			if (isDigit(dst))  
 			{  
-				++top1;  
-				cSt[top1] = atof(dst);     //进栈  
+				++top;  
+				cSt[top] = atof(dst);     //进栈  
 			}  
 			else if(isOperator(*dst))
 			{  
 				
-				// printf("\n %f %c %f=",cSt[top1-1], dst[0], cSt[top1]);
-				cSt[top1-1] = OP( cSt[top1-1], cSt[top1], dst[0], error); 
-				// printf("%f",cSt[top1-1]); 
-				--top1;     //操作数栈：出栈俩，进栈一 
+				// printf("\n %f %c %f=",cSt[top-1], dst[0], cSt[top]);
+				cSt[top-1] = OP( cSt[top-1], cSt[top], dst[0], error); 
+				// printf("%f",cSt[top-1]); 
+				--top;     //操作数栈：出栈俩，进栈一 
 			}
 			else if(isSymFunction(*dst))
 			{
-				// printf("\n %c %f=", dst[0], cSt[top1]);
-				cSt[top1] = OP( 0, cSt[top1], dst[0], error); 
-				// printf("%f",cSt[top1]); 
+				// printf("\n %c %f=", dst[0], cSt[top]);
+				cSt[top] = OP( 0, cSt[top], dst[0], error); 
+				// printf("%f",cSt[top]); 
 			}
 			while (*(expr+i) && *(expr+i) != ' ')  
 			    ++i;
@@ -434,12 +439,12 @@ double Calculate(char const* expr_in, error_t* error)
 	}
 
     result = cSt[1];
-    // free(cSt);
-    // cSt = NULL;
-    // free(dst);
-    // dst = NULL;
-    // free(expr);
-    //expr = null;
+    free(cSt);
+    cSt = NULL;
+    free(dst);
+    dst = NULL;
+    free(expr);
+    expr = NULL;
 	// what that code means ?
 	 if (error == NULL)
      	*error = ERR_OK;
@@ -616,7 +621,7 @@ void ProcessLine(char const* line)
         ReportError(lastError);
     
     // 为什么注释掉这一行 ？
-	// free(expr_in); //这里有问题需要解决
+	free(expr_in); //这里有问题需要解决
 
 }
 

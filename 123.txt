@@ -84,3 +84,7 @@ asin(1/(atg43)^(actg12))
 ((lncbrt45/actg0.87-6^3)-atg326)/78!
 
 acos(actg45*cos45!^6)/(ctg0-cbrt90)-3*8
+
+-1
+
+1-
