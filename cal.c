@@ -627,11 +627,7 @@ int main(int argc, char const* argv[])
     
 
     // Choose an input source
-    if (argc == 1 )
-    {
-        in = stdin;
-    }
-    else if  ((in = fopen(argv[1], "r")) == NULL)
+    if  (argc > 1 && (in = fopen(argv[1], "r")) == NULL)
     {
         printf("ERROR: Cannot open file '%s'", argv[1]);
         return -1;
