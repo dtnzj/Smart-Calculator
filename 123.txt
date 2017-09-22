@@ -1,90 +1,79 @@
-123+(123*(5+4))
+			
+   // hello, my dear! Nice to meet you!
+2+2
+2*2
+2/2
+2 ^ 2
+2/0
+7-7
+ILLKILLYOU
+-3+15
+(2-5)*4
+2+2+2+2+2+2+2+2+2+2+2+2+2+2
+2^2.6^3
+sin(15) - arcsin(0)
+ln(12) * e
+pi
+pi/3
+tg(11)
+arcsin(2)
+arcsin(15+(2*4) - cos(11)/e^2)
+1+(
+2+()
+(37)
+//(15*4)+2
+ln(e)
+cos(pi/4)/sin(pi/4)
+2*sqrt(5)-11+3^8*15 / 4
+sin(cos(tg))
+15+*12
+--7
+ceil(342.6354/15^2)
+ceil(0)
+ln(sqrt(-1))
+ln(-1)
+arccos(arcsin(-1))
+0
+ln(arcsin(0))
+()()
+90
+???
+e^e/pi
+///What?!
+ 	 	2+       17
+17^71
 
-gaserg
-ageergeg
-60+100/200*lnsqrt(arctg6^2)/(3*arcsincos2)
- 123+3
- fawef
-1
+15e-14 / sin(138)^2 + (ceil(e / 3) / 4) ^ 3.24 - pi
 
-1+2*(3+4*(5+6
-6+5*
+2+(-2)
 
-30!/50*sin30
+(123.141^13)^4 - floor(arcsin(floor(sqrt(e))))
+2^2^2^2^2^2^2^2^2^2
+(15*4) + (3-2)
 
-50-10*lg70
+((15/3)^(4-2))
 
-!lnsin90cos70
-loglnlg3
-1/tg180*sin60
+arcsin(0.15)/(cos(tg(pi)-3)^(13/(9-3))) + floor(e*241.53 - 11/pi)
 
-45^34/ctg49*4
+		
+5+(7-2*3)*(6-4)/2
 
-3asincossbrt2
+(2-3)*((4-5)+(7-8))/(2^(11-7)+1)^(2/3)
 
-sin0.5-asintg68*4/7
+sin()
 
-(((333*tg34/^log10(20))
+ 786 235 11 35.13526
+			
+2^(11-7)+1)^(2/3)
 
+--3
 
-(1/(log(cbrt45*asin0.87)+6!)-lg576)/78
+2--3
 
+15/-4
 
-(ctg78-asin0.8)-actg89*sbrt67
-
-(1.0+2/3.5-4)*cos8
-
-arctg40*lgsincoscbrt(30)
-
-100%200*lnlg(asin6^2)/(3asincoss2)
-
-asin(1/(cbrt43)^(sbrt12))
-
-2343-(sin70*cos80)^ctglg90
-
-!(ln(cbrt45/asin0.87)-6^3)-!lg326)/78
-
-acos(!tg45*cos45^6)/(ctg0-cbrt90)-3*8
+---------------------------------------------------------------------------------------------sin(-----------1345.265)
 
 
-50%actgsin30
-
-50-10*actglg70
-
-lnsin90^actgcos70!
-
-actg43loglnlg3
-
-1/tg180+actgsin60!
-
-45^actgctg49*4
-
-34*65-actg3^asincossbrt2
-
-sin0.5-asinactg68*4/7
-
-(333*tg34/4^actg10log(20))
-
-(1/actg(32log(cbrt45*asin0.87)+6!))/78
-
-(ctg78-asin0.8)-cosactg89*sbrt67
-
-(1.0+2/3.5-4)*asinactg8
-
-((1.5-sintg5)/ctg6.0-atg6logactg32)-9
-
-actg40*lgsinactgcbrt(30)
-
-100%200*lnlg(asin6^2)/(3logactgcos2)
-
-asin(1/(atg43)^(actg12))
-
-2343-(sin70*cos80)^ctgactg90
-
-((lncbrt45/actg0.87-6^3)-atg326)/78!
-
-acos(actg45*cos45!^6)/(ctg0-cbrt90)-3*8
-
--1
-
-1-
+tg(pi/2 + 17*pi)
+   		// == ERROR: Out of domain

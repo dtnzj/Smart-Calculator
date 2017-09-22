@@ -295,12 +295,18 @@ void minus2negative(char *expr)
 // 输出参数：	output	包含逆波兰表达式的字符串,各元素间以空格作为间隔符。
 void Polish (char const*s, char *output, error_t* error)
 {  
-    unsigned int outLen = 0,i=0;  
+    unsigned int outLen = 0,i=0,len = 0;  
     unsigned int top = 0;           //stack count
 
-    char *stack = (char*)malloc( 4*strlen(s) * sizeof(char));
-    char *expr_in = (char*)malloc( 4*strlen(s) * sizeof(char));
-	//printf("\nstack len == %d", 2 * strlen(s) * sizeof(char));
+    char *stack = NULL;
+    char *expr_in = NULL;
+    
+    len = 2*strlen(s) * sizeof(char);
+    stack = (char*)malloc(len );
+    expr_in = (char*)malloc( len);
+    memset(stack,   '\0',len-1);
+    memset(expr_in, '\0',len-1);
+    //printf("\nstack len == %d", 2 * strlen(s) * sizeof(char));
     // no memory error test 
     if (stack == NULL || expr_in == NULL )
     {
@@ -354,13 +360,13 @@ void Polish (char const*s, char *output, error_t* error)
         }  
         if (*(expr_in+i)==')')                  //6）假如是开括号，栈中运算符逐个出栈并输出，直到遇到闭括号。闭括号出栈并丢弃。  
         {  
-            while (stack[top]!='(')  
+            while (stack[top]!='(' && top >0)  
             {  
                 output[outLen++] = stack[top];  
                 output[outLen++] = ' ';  
                 --top;  
             }  
-            --top;  // 此时stack[top]==')',跳过)  
+            if (top >0)   --top;  // 此时stack[top]==')',跳过)  
         }
         ++ i;  
         //7）假如输入还未完毕，跳转到步骤2。  
@@ -393,37 +399,33 @@ double Calculate(char const* expr_in, error_t* error)
 {
 	double result = 0;
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
-    unsigned int top=0,i=0,len = 0; 
-    char *expr= (char*)malloc(2*strlen(expr_in) * sizeof(char));
-    char *dst = (char*)malloc( 40 * sizeof(char));  
-    double *cSt = (double*)malloc( 2*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
+    unsigned int top=0,i=0,len[2] = {0,0}; 
+    // char *expr= (char*)malloc(2*strlen(expr_in) * sizeof(char));
+    char *dst[20];  
+    // double *cSt = (double*)malloc( 2*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     
-    // char *expr= NULL;
-    // char *dst = NULL;
-    // double *cSt = NULL;
+    char *expr= NULL;
+    double *cSt = NULL;
     
-    // len = 2 * strlen(expr_in) * sizeof(char);
-    // expr= (char*)malloc( len );
-    // memset(expr,'\0',len-1);
+    len[0] = 2 * strlen(expr_in) * sizeof(char);
+    expr= (char*)malloc( len[0] );
     
-    // len = 2 * strlen(expr_in) * sizeof(double);
-    // cSt = (double*)malloc( len );   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
-    // memset(cSt,'\0',len-1);
+    len[1] = 2 * strlen(expr_in) * sizeof(double);
+    cSt = (double*)malloc( len[1] );   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     
-    // len =  20 * sizeof(char);
-    // dst = (char*)malloc( len );  
-    // memset(dst,'\0',len-1);
-
     // no memory error test 
-    if (expr == NULL || dst == NULL ||cSt == NULL )
+    if (expr == NULL || cSt == NULL )
     {
         // printf("ERROR: Memory Not Enough \n");
         *error = ERR_NOT_ENOUGH_MEMORY;
         free(expr);
-        free(dst);
         free(cSt);
         return 0;
     }
+    memset(expr,'\0',len[0]-1);
+    memset(cSt,'\0',len[1]-1);
+    
+    
     Polish (expr_in, expr, error);
     // if the polish function gives error status
     if (*error != ERR_OK)
@@ -463,8 +465,6 @@ double Calculate(char const* expr_in, error_t* error)
     result = cSt[1];
     free(cSt);
     cSt = NULL;
-    free(dst);
-    dst = NULL;
     free(expr);
     expr = NULL;
 	// what that code means ?
