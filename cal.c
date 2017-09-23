@@ -29,7 +29,6 @@
 /***************************Questions***********************************/
 //1.在对动态分配变量line的使用需要小心，防止由于更改‘\n’字符而导致内存泄露
 //5. 可以的话吧函数传参时候的变量名尽量改成一致的，不会造成误解。
-//6. 1.2 3.4 这种，数字间没有运算符，之后空格，会被当成同一个数字
 //7. 表达式中有特殊符号，会被跳过 i.e. ||||
 //8. 1+( == 2   ????
 /****************************END****************************************/
@@ -57,8 +56,9 @@ typedef enum
   ERR_OK,
   ERR_NOT_ENOUGH_MEMORY,
   ERR_WRONG_EXPRESSION,
-  ERR_Div_BY_ZERO,
-  ERR_INCORRECT_PARA,
+  ERR_DIV_BY_ZERO,
+  ERR_INCORRECT_PARAMETERS,
+  ERR_TOO_MANY_PARAMETERS,
   ERR_OTHER,            // add this statue to represent all other error that we didn't give
   
   // TODO: Add your own error codes
@@ -71,26 +71,29 @@ char const* GetErrorString(error_t error)
     // TODO: Find the corresponding error description
     switch(error)
     {
+        case ERR_OK:		
+            errorStr = "No Error";
+            break;
         case ERR_NOT_ENOUGH_MEMORY:
             errorStr = "ERROR: ERR_NOT_ENOUGH_MEMORY";
             break;
         case ERR_WRONG_EXPRESSION:
             errorStr = "ERROR: ERR_WRONG_EXPRESSION";
             break;
-        case ERR_Div_BY_ZERO:    
-            errorStr = "ERROR: ERR_Div_BY_ZERO";
+        case ERR_DIV_BY_ZERO:    
+            errorStr = "ERROR: ERR_DIV_BY_ZERO";
             break;
-        case ERR_INCORRECT_PARA:    
-            errorStr = "ERROR: ERR_INCORRECT_PARA";
+        case ERR_INCORRECT_PARAMETERS:    
+            errorStr = "ERROR: ERR_INCORRECT_PARAMETERS";
+            break;
+        case ERR_TOO_MANY_PARAMETERS:    
+            errorStr = "ERROR: ERR_TOO_MANY_PARAMETERS";
             break;
         case ERR_OTHER:
+        default:
             errorStr = "ERROR: Unkown Error";
             break;      
-        case ERR_OK:
-		default:
-			errorStr = "No Error";
-			break;
-
+        
     }
     return errorStr;
 }
@@ -134,7 +137,8 @@ int isNumber(char *op)
 int isConstantNum(char *op)
 {
     return (    ((*op =='p') && (*(op+1) =='i')) 
-               || ((*op =='e') && !isNumber(op+1))
+                || ((*(op-1) =='p') && (*op =='i')) 
+                || ((*op =='e') && !isNumber(op+1))
            );
 }
 
@@ -242,15 +246,7 @@ void fun2sym(char *expr, error_t *error)
                     *(++expr) = ' ';
             }
         }
-        // else if(isConstantNum(expr))
-		// {
-		// 	if( *expr == 'p')
-		// 	{
-		// 		// *(expr+1) = ' ';
-		// 		++expr;
-		// 	}
-		// }
-		else if (isAlphabet(*expr))
+        else if (!isDigit(expr) && isAlphabet(*expr))
         {
 			*error = ERR_WRONG_EXPRESSION;
 			return;
@@ -273,7 +269,7 @@ double OP(double op1,double op2,char op, error_t *error)
         case '/': 
                 if(op2 == 0.0 )
                 {
-                    *error = ERR_Div_BY_ZERO;
+                    *error = ERR_DIV_BY_ZERO;
                     return 0;
                 }
                 else
@@ -288,7 +284,7 @@ double OP(double op1,double op2,char op, error_t *error)
         case 'F': 
                 if ( op2>1.0 || op2<-1.0 )
                 {
-                    *error = ERR_INCORRECT_PARA;
+                    *error = ERR_INCORRECT_PARAMETERS;
                     return 0;
                 }
                 else
@@ -296,7 +292,7 @@ double OP(double op1,double op2,char op, error_t *error)
         case 'G': 
                 if ( op2>1.0 || op2<-1.0 )
                 {
-                    *error = ERR_INCORRECT_PARA;
+                    *error = ERR_INCORRECT_PARAMETERS;
                     return 0;
                 }
                 else
@@ -305,7 +301,7 @@ double OP(double op1,double op2,char op, error_t *error)
         case 'I': 
                 if ( op2<1.0 )
                 {
-                    *error = ERR_INCORRECT_PARA;
+                    *error = ERR_INCORRECT_PARAMETERS;
                     return 0;
                 }
                 else
@@ -313,7 +309,7 @@ double OP(double op1,double op2,char op, error_t *error)
         case 'J': 
                 if ( op2<1.0 )
                 {
-                    *error = ERR_INCORRECT_PARA;
+                    *error = ERR_INCORRECT_PARAMETERS;
                     return 0;
                 }
                 else
@@ -500,57 +496,63 @@ double Calculate(char const* expr_in, error_t* error)
     
     Polish (expr_in, expr, error);
     // if the polish function gives error status
-    if (*error != ERR_OK)
-        return 0;
+    // if (*error != ERR_OK)
+    //     return 0;
 	
 	while ( *(expr+i) )  
 	{  
-		//printf( "\ns = %s ", (expr+i));
+        if (*error != ERR_OK) break;
+		
+        //printf( "\ns = %s ", (expr+i));
 		if (*(expr+i) != ' ')  
 		{  
 			sscanf((expr+i),"%s",dst);  
 			if (isDigit(dst))  
 			{  
 				++top;  
-				// if(isConstantNum( dst ) || *dst == 'p')
-				// {
-				// 	printf(" cosnt");
-				// 	if (*dst == 'p' )  cSt[top] =3.14159265358979323846;
-				// 	else if (*dst == 'e' )  cSt[top] =2.718281828;
-				// }
-				// else
+				if( isConstantNum( dst ) )
+				{
+					if (*dst == 'p' )  cSt[top] =3.141592653;
+					else if (*dst == 'e' )  cSt[top] =2.718281828;
+				}
+				else
 				cSt[top] = atof(dst);     //进栈  
 			}  
 			else if(isOperator(*dst))
 			{  
-				
-				// printf("\n %f %c %f=",cSt[top-1], dst[0], cSt[top]);
-				cSt[top-1] = OP( cSt[top-1], cSt[top], dst[0], error); 
-				// printf("%f",cSt[top-1]); 
-				--top;     //操作数栈：出栈俩，进栈一 
+				if (top <= 1)
+                    *error = ERR_INCORRECT_PARAMETERS;
+                else
+                {
+                    // printf("\n %f %c %f=",cSt[top-1], dst[0], cSt[top]);
+                    cSt[top-1] = OP( cSt[top-1], cSt[top], dst[0], error); 
+                    // printf("%f",cSt[top-1]); 
+                    --top;     //操作数栈：出栈俩，进栈一 
+                }
 			}
 			else if(isSymFunction(*dst)  || *dst=='~')
 			{
 				// printf("\n %c %f=", dst[0], cSt[top]);
-				cSt[top] = OP( 0, cSt[top], dst[0], error); 
+                if (top == 0)
+                    *error = ERR_INCORRECT_PARAMETERS;
+                else
+                    cSt[top] = OP( 0, cSt[top], dst[0], error); 
 				// printf("%f",cSt[top]); 
 			}
 			while (*(expr+i) && *(expr+i) != ' ')  
 			    ++i;
-		}
-		++i;  
+        }
+        ++i;  
 	}
-
+    // printf ("top == %d",top);
+    if (top >1)  *error = ERR_TOO_MANY_PARAMETERS;
     result = cSt[1];
     free(cSt);
     cSt = NULL;
     free(expr);
     expr = NULL;
-	// what that code means ?
-	 if (error == NULL)
-     	*error = ERR_OK;
-
-	return result;
+    
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -681,28 +683,6 @@ int NeedCalculate(char const* line)
 
     return 1;
 }
-
-//int NeedCalculate(char const* line)
-//{
-//	int i = 0, j = 0;
-//	if (line[i] == 0)
-//		return 0;
-//	do
-//	{
-//		if ((line[i] == '/') && (line[i + 1] == '/') && (j == 0))
-//			return 0;
-//		if (!((line[i] == '\a') || (line[i] == '\b') || (line[i] == '\t') || (line[i] == '\n') || \
-//			(line[i] == '\v') || (line[i] == '\r') || (line[i] == '\f') || (line[i] == ' ')))
-//			j++;
-//		i++;
-//	} while (line[i] != '\0');
-//	if (j == 0)
-//		return 0;
-//	else
-//		return 1;
-//}
-
-
 
 void ProcessLine(char const* line)
 {

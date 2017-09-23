@@ -1,5 +1,9 @@
 			
    // hello, my dear! Nice to meet you!
+e 
+1e2 
+e3 
+pi
 2+2
 2*2
 2/2
