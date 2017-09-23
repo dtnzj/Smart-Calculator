@@ -161,7 +161,7 @@ int isOperator(char op)
 #define FUNMAX 20   //程序支持的所有数学函数个数
 typedef struct
 {
-    char name[7];
+    char name[10];
     char sym;
 } funName2Sym;
 funName2Sym funName[FUNMAX] = {   "sin",      'A',    //1
@@ -222,7 +222,8 @@ void fun2sym(char *expr, error_t *error)
     while (*expr)
     {
         tmp = isFunction(expr)-1;
-        // 这个写法有点儿逆天，但是暂时没找到更好的优化方案
+        //printf( "tmp = %d \n", tmp);
+		// 这个写法有点儿逆天，但是暂时没找到更好的优化方案
         if(tmp>-1) //if the first several alphabet consist of the function name
         {
             int strl = strlen(funName[tmp].name);
@@ -391,10 +392,13 @@ void Polish (char const*s, char *output, error_t* error)
     if(*error != ERR_OK)
         return;
     
-        //如果output申请时，空间中不包含\0，那么计算的时候很可能会超出指定的容量最终报错
-	//memset(output,'\0',strlen(output) *sizeof (char));  //输出串  
     while(*(expr_in+i))               //1）  
     {  
+		// if(outLen >=len || top >= len)
+		// {
+		// 	*error = ERR_NOT_ENOUGH_MEMORY;
+		// 	return ;
+		// }
 		//printf("\ntop = %d", top);
 		if (isDigit(expr_in+i))              
         {
