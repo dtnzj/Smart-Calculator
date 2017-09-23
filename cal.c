@@ -97,7 +97,7 @@ char const* GetErrorString(error_t error)
 
 void ReportError(error_t error)
 {
-  printf("ERROR: %s\n", GetErrorString(error));
+  printf("%s", GetErrorString(error));
 //   return error;
 }
 
@@ -341,14 +341,18 @@ void copyExpr(char *a, char const*b)
 // 输出参数：	经过转换的字符串
 void minus2negative(char *expr)
 {
-    int i=0;
-    
+    int i=0,j=0;
+    while( expr[i] == ' ' && expr[i] != '\0' ) ++i;
     if (expr[i] == '-') expr[i++] = '~';
     while( expr[i] )
     {
         if ( expr[i] == '-' )
-            if ( !isDigit( &expr[i-1]) && expr[i-1]!=')' )
+        {
+            j = i-1;
+            while( expr[j] == ' ' ) --j;
+            if ( !isDigit( &expr[j]) && expr[j]!=')' )
                 expr[i] = '~';
+        }
         ++i;
     }
 }
@@ -381,7 +385,7 @@ void Polish (char const*s, char *output, error_t* error)
         return;
     }
     strcpy(expr_in,s);
-    //minus2negative(expr_in);
+    minus2negative(expr_in);
     fun2sym(expr_in, error);
     
     if(*error != ERR_OK)
@@ -628,7 +632,7 @@ int NeedCalculate(char const* line)
     for ( ; i < SPESYMmax; i++)
         if(line[counter] ==  spesym[i])//空行
         {  
-            printf("%s", line);        
+            //printf("%s", line);        
             return 0;
         }
 //检查
@@ -637,7 +641,7 @@ int NeedCalculate(char const* line)
         //个别情况下，输入文件会在这里直接换行，因此空行也可能是\n
         if(line[counter] == '/' && line[counter+1] == '/')//注释行
 		{
-			printf("%s", line);
+			//printf("%s", line);
 			return 0;
 		}
         
@@ -719,18 +723,18 @@ void ProcessLine(char const* line)
 	expr_in[i -1] = '\0';
 
     
-    //printf("%s", expr_in);        
+    printf("%s", expr_in);        
     if(NeedCalculate(expr_in))
     {
-        result = Calculate(line, &lastError);
-        printf("%s == ", expr_in);        
+        result = Calculate(expr_in, &lastError);
+        printf(" == ");    
+        if (lastError == ERR_OK)
+            printf("%lg", result);   
+        else
+            ReportError(lastError);
     }
-    if (lastError == ERR_OK)
-        printf("%lg\n", result);
-    else
-	    ReportError(lastError);
-    
-	free(expr_in); //这里有问题需要解决
+    printf("\n");    
+    free(expr_in); //这里有问题需要解决
 
 }
 
@@ -757,7 +761,6 @@ int main(int argc, char const* argv[])
     {
         
         ProcessLine(line);
-
         free(line);
     }
     //结尾处最后一行的处理
