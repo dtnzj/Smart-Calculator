@@ -57,6 +57,8 @@ typedef enum
   ERR_OK,
   ERR_NOT_ENOUGH_MEMORY,
   ERR_WRONG_EXPRESSION,
+  ERR_Div_BY_ZERO,
+  ERR_INCORRECT_PARA,
   ERR_OTHER,            // add this statue to represent all other error that we didn't give
   
   // TODO: Add your own error codes
@@ -70,15 +72,21 @@ char const* GetErrorString(error_t error)
     switch(error)
     {
         case ERR_NOT_ENOUGH_MEMORY:
-            errorStr = "ERR_NOT_ENOUGH_MEMORY";
+            errorStr = "ERROR: ERR_NOT_ENOUGH_MEMORY";
             break;
         case ERR_WRONG_EXPRESSION:
-            errorStr = "ERR_WRONG_EXPRESSION";
+            errorStr = "ERROR: ERR_WRONG_EXPRESSION";
+            break;
+        case ERR_Div_BY_ZERO:    
+            errorStr = "ERROR: ERR_Div_BY_ZERO";
+            break;
+        case ERR_INCORRECT_PARA:    
+            errorStr = "ERROR: ERR_INCORRECT_PARA";
             break;
         case ERR_OTHER:
-            errorStr = "Unkown Error";
+            errorStr = "ERROR: Unkown Error";
             break;      
-		case ERR_OK:
+        case ERR_OK:
 		default:
 			errorStr = "No Error";
 			break;
@@ -126,13 +134,14 @@ int isNumber(char *op)
 int isConstantNum(char *op)
 {
     return (    ((*op =='p') && (*(op+1) =='i')) 
-               || (*op =='e')
+               || ((*op =='e') && !isNumber(op+1))
            );
 }
 
 int isDigit(char *op)
 {
     return  ((*op =='.'&&isNumber( op+1 ))      //小数，且点号后面有数字
+			|| ((*op =='e') && isNumber(op+1))  //数字
             || isNumber( op )                   //数字
             || isConstantNum( op )              //数学常数: 自然对数e 以及圆周率pi
             );
@@ -216,12 +225,31 @@ void fun2sym(char *expr, error_t *error)
         // 这个写法有点儿逆天，但是暂时没找到更好的优化方案
         if(tmp>-1) //if the first several alphabet consist of the function name
         {
-            // replace it with its sym 
-            *expr = funName[tmp].sym;
-            for( i =strlen(funName[tmp].name); i>1; i--)
-                *(++expr) = ' ';
+            int strl = strlen(funName[tmp].name);
+            i=strl;
+            while( expr[i]==' ' ) i++;
+            if( expr[i] == '(' && i != strl)
+            {
+                *error = ERR_WRONG_EXPRESSION;
+                return;
+            }
+            else
+            {
+                // replace it with its sym 
+                *expr = funName[tmp].sym;
+                for( i = strl ; i>1; i--)
+                    *(++expr) = ' ';
+            }
         }
-        else if(isAlphabet(*expr) && *expr != 'e')
+        // else if(isConstantNum(expr))
+		// {
+		// 	if( *expr == 'p')
+		// 	{
+		// 		// *(expr+1) = ' ';
+		// 		++expr;
+		// 	}
+		// }
+		else if (isAlphabet(*expr))
         {
 			*error = ERR_WRONG_EXPRESSION;
 			return;
@@ -241,18 +269,54 @@ double OP(double op1,double op2,char op, error_t *error)
         case '+': res = op1 + op2; break;
         case '-': res = op1 - op2; break;
         case '*': res = op1 * op2; break;
-        case '/': res = op1 / op2; break;
+        case '/': 
+                if(op2 == 0.0 )
+                {
+                    *error = ERR_Div_BY_ZERO;
+                    return 0;
+                }
+                else
+                    res = op1 / op2; 
+                    break;
         case '~': res =      -op2; break;
         case '^': res =   pow(op1, op2); break;
         case 'A': res =   sin(op2); break;
         case 'B': res =   cos(op2); break;
         case 'C': res =   tan(op2); break;
         case 'D': res = 1/tan(op2); break;
-        case 'F': res =  asin(op2); break;
-        case 'G': res =  acos(op2); break;
+        case 'F': 
+                if ( op2>1.0 || op2<-1.0 )
+                {
+                    *error = ERR_INCORRECT_PARA;
+                    return 0;
+                }
+                else
+                    res =  asin(op2); break;
+        case 'G': 
+                if ( op2>1.0 || op2<-1.0 )
+                {
+                    *error = ERR_INCORRECT_PARA;
+                    return 0;
+                }
+                else
+                    res =  acos(op2); break;
         case 'H': res =  atan(op2); break;
-        case 'I': res =  sqrt(op2); break;
-        case 'J': res =   log(op2); break;
+        case 'I': 
+                if ( op2<1.0 )
+                {
+                    *error = ERR_INCORRECT_PARA;
+                    return 0;
+                }
+                else
+                    res =  sqrt(op2); break;
+        case 'J': 
+                if ( op2<1.0 )
+                {
+                    *error = ERR_INCORRECT_PARA;
+                    return 0;
+                }
+                else
+                    res =   log(op2); break;
         case 'K': res = floor(op2); break;
         case 'L': res =  ceil(op2); break;
         default: *error = ERR_OTHER;
@@ -316,8 +380,8 @@ void Polish (char const*s, char *output, error_t* error)
         free(expr_in);
         return;
     }
-    copyExpr(expr_in,s);
-    minus2negative(expr_in);
+    strcpy(expr_in,s);
+    //minus2negative(expr_in);
     fun2sym(expr_in, error);
     
     if(*error != ERR_OK)
@@ -401,7 +465,7 @@ double Calculate(char const* expr_in, error_t* error)
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
     unsigned int top=0,i=0,len[2] = {0,0}; 
     // char *expr= (char*)malloc(2*strlen(expr_in) * sizeof(char));
-    char *dst[20];  
+	char dst[20] = {0};  
     // double *cSt = (double*)malloc( 2*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     
     char *expr= NULL;
@@ -440,6 +504,13 @@ double Calculate(char const* expr_in, error_t* error)
 			if (isDigit(dst))  
 			{  
 				++top;  
+				// if(isConstantNum( dst ) || *dst == 'p')
+				// {
+				// 	printf(" cosnt");
+				// 	if (*dst == 'p' )  cSt[top] =3.14159265358979323846;
+				// 	else if (*dst == 'e' )  cSt[top] =2.718281828;
+				// }
+				// else
 				cSt[top] = atof(dst);     //进栈  
 			}  
 			else if(isOperator(*dst))
@@ -570,6 +641,21 @@ int NeedCalculate(char const* line)
 			return 0;
 		}
         
+        // if(line[counter]=='s'&& line[counter+1]=='i' && line[counter+2]=='n')
+		// {	
+		// 	for(i=3; line[counter+i]==' ';i++ );
+		// 	if(line[counter+i] == '(' && i != 3)
+		// 	{   
+				
+		// 		error_t  error = ERR_WRONG_EXPRESSION;
+				
+		// 		printf("%s == ", expr_in);
+			
+		// 		ReportError(error);
+		// 		free(expr_in);
+		// 		return 0;
+		// 	}
+		// }
         // if( isDigit( &line[counter] )   )   counter++;
         // if( isFunction(&line[counter])  ) ;
         // if( isOperator(&line[counter])  )   counter++;
@@ -634,10 +720,11 @@ void ProcessLine(char const* line)
 
     
     //printf("%s", expr_in);        
-    
-    result = Calculate(line, &lastError);
-        
-    printf("%s == ", expr_in);        
+    if(NeedCalculate(expr_in))
+    {
+        result = Calculate(line, &lastError);
+        printf("%s == ", expr_in);        
+    }
     if (lastError == ERR_OK)
         printf("%lg\n", result);
     else
@@ -669,8 +756,7 @@ int main(int argc, char const* argv[])
     while ((line = ReadLine(in, len_p)) != NULL || Statut_File == END_FILE)
     {
         
-        if(NeedCalculate(line))
-            ProcessLine(line);
+        ProcessLine(line);
 
         free(line);
     }
