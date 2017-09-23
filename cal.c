@@ -730,7 +730,7 @@ void ProcessLine(char const* line)
     printf("%s", expr_in);        
     if(NeedCalculate(expr_in))
     {
-        result = Calculate(expr_in, &lastError);
+        result = Calculate(line, &lastError);
         printf(" == ");    
         if (lastError == ERR_OK)
             printf("%lg", result);   
