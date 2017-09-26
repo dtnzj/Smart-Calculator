@@ -469,7 +469,8 @@ double Calculate(char const* expr_in, error_t* error)
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
     unsigned int top=0,i=0,len[2] = {0,0}; 
     // char *expr= (char*)malloc(2*strlen(expr_in) * sizeof(char));
-	char dst[20] = {0};  
+	char dst[20] = {0};
+	char flag = FALSE;
     // double *cSt = (double*)malloc( 2*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     
     char *expr= NULL;
@@ -517,6 +518,7 @@ double Calculate(char const* expr_in, error_t* error)
 				}
 				else
 				cSt[top] = atof(dst);     //进栈  
+				flag = TRUE;
 			}  
 			else if(isOperator(*dst))
 			{  
@@ -546,6 +548,7 @@ double Calculate(char const* expr_in, error_t* error)
 	}
     // printf ("top == %d",top);
     if (top >1)  *error = ERR_TOO_MANY_PARAMETERS;
+	if(flag == FALSE) *error = ERR_WRONG_EXPRESSION;
     result = cSt[1];
     free(cSt);
     cSt = NULL;
