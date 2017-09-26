@@ -566,61 +566,72 @@ double Calculate(char const* expr_in, error_t* error)
 // 输出：		返回动态分配后字符串首地址
 char* ReadLine(FILE* in, int* len)
 {
-  char* line = (char*)malloc(2*sizeof(char));
-  int temp;
+    char* line = (char*)malloc(2*sizeof(char));
+    int temp;
 
-  *len = 0;
-  if(line == NULL)
-  {
-	printf("ERROR: Memory Not Enough \n");
-	free(line);
-	return NULL;
-  }
-
-  do{
-	temp= fgetc(in);
-
-	if(line == NULL)
+    *len = 0;
+    if(line == NULL)
+    {
+        printf("ERROR: Memory Not Enough \n");
+        free(line);
+        return NULL;
+    }
+    if ((line[0] = (char)fgetc(in)) == EOF)
 	{
-		printf("ERROR: Memory Not Enough \n");
 		free(line);
 		return NULL;
 	}
-//考虑如果读到文件结尾后，在进行一次读写会不会出问题
-	if(temp == EOF || temp == 26)
-	{   
-//遇到的文件为空文件
-        if(*len == 0)
-        {
-			if(line != NULL)
-				free(line);
-			return NULL;//这种情况可以直接结束返回
-		}
-		else
-		{
-			Statut_File = END_FILE;//将结尾换成换行符，并更改状态，执行完赋值操作，然后结束返回
-			temp = '\n';
-		}
-	}
-//插入到字符串操作
-	else
+	if (line[0] == '\n')
 	{
-		line[*len] = (char)temp;
-		(*len)++;
-		line =(char*)realloc(line, ((*len)+1)*sizeof(char));
-		if(line == NULL)
-		{
-			printf("ERROR: Memory Not Enough \n");
-			free(line);
-			return NULL;
-		}
+		line[0] = 0;
+		return line;
 	}
 
+    do
+    {
+        temp= fgetc(in);
 
-  }while(temp != '\n');
+        //if(line == NULL)
+        //{
+        //	printf("ERROR: Memory Not Enough \n");
+        //	free(line);
+        //	return NULL;
+        //}
+        //考虑如果读到文件结尾后，在进行一次读写会不会出问题
+        if(temp == EOF || temp == 26)
+        {   
+        //遇到的文件为空文件
+            if(*len == 0)
+            {
+                if(line != NULL)
+                    free(line);
+                return NULL;//这种情况可以直接结束返回
+            }
+            else
+            {
+                Statut_File = END_FILE;//将结尾换成换行符，并更改状态，执行完赋值操作，然后结束返回
+                temp = '\n';
+            }
+        }
+        //插入到字符串操作
+        else
+        {
+            line[*len] = (char)temp;
+            (*len)++;
+            line =(char*)realloc(line, ((*len)+1)*sizeof(char));
+            if(line == NULL)
+            {
+                printf("ERROR: Memory Not Enough \n");
+                free(line);
+                return NULL;
+            }
+        }
 
-  line[*len] = '\0';
-  return line;
+
+    }while(temp != '\n');
+
+    line[*len] = '\0';
+    return line;
 }
 
 // 功能： 初步判断计算需要
@@ -631,11 +642,11 @@ char* ReadLine(FILE* in, int* len)
 char spesym[SPESYMmax] ={'\0','\n','\t','\r','\a','\b','\v','\f'};
 int NeedCalculate(char const* line)
 {
-	int counter = 0, i = 0;
+	int counter = 0, i = 0, len =0;
 	//char lastch = TRUE;
-    
+    len = strlen(line);
     // remove the spaces
-    while(line[counter] == ' ')
+    while(line[counter] == ' ' && counter<= len)
         counter++; 
     
     for ( ; i < SPESYMmax; i++)
@@ -644,42 +655,47 @@ int NeedCalculate(char const* line)
             //printf("%s", line);        
             return 0;
         }
+    if(line[counter] == '/' && line[counter+1] == '/')//注释行
+    {
+        //printf("%s", line);
+        return 0;
+    }	
 //检查
-	do
-	{
-        //个别情况下，输入文件会在这里直接换行，因此空行也可能是\n
-        if(line[counter] == '/' && line[counter+1] == '/')//注释行
-		{
-			//printf("%s", line);
-			return 0;
-		}
-        
-        // if(line[counter]=='s'&& line[counter+1]=='i' && line[counter+2]=='n')
-		// {	
-		// 	for(i=3; line[counter+i]==' ';i++ );
-		// 	if(line[counter+i] == '(' && i != 3)
-		// 	{   
-				
-		// 		error_t  error = ERR_WRONG_EXPRESSION;
-				
-		// 		printf("%s == ", expr_in);
-			
-		// 		ReportError(error);
-		// 		free(expr_in);
-		// 		return 0;
-		// 	}
-		// }
-        // if( isDigit( &line[counter] )   )   counter++;
-        // if( isFunction(&line[counter])  ) ;
-        // if( isOperator(&line[counter])  )   counter++;
-        
-        //判断结尾是否为数字
-		 //if(line[counter]>47 && line[counter]<58)
-		 //	lastch = TRUE;
-		 //else if(line[counter]!='\n' && line[counter]!=' ' && line[counter] != '(' && line[counter] != ')')
-		 //	lastch = FALSE;
-         counter++;
-    }while(line[counter] != '\0');
+	//do
+	//{
+ //       //个别情况下，输入文件会在这里直接换行，因此空行也可能是\n
+ //       if(line[counter] == '/' && line[counter+1] == '/')//注释行
+	//	{
+	//		//printf("%s", line);
+	//		return 0;
+	//	}
+ //       
+ //       // if(line[counter]=='s'&& line[counter+1]=='i' && line[counter+2]=='n')
+	//	// {	
+	//	// 	for(i=3; line[counter+i]==' ';i++ );
+	//	// 	if(line[counter+i] == '(' && i != 3)
+	//	// 	{   
+	//			
+	//	// 		error_t  error = ERR_WRONG_EXPRESSION;
+	//			
+	//	// 		printf("%s == ", expr_in);
+	//		
+	//	// 		ReportError(error);
+	//	// 		free(expr_in);
+	//	// 		return 0;
+	//	// 	}
+	//	// }
+ //       // if( isDigit( &line[counter] )   )   counter++;
+ //       // if( isFunction(&line[counter])  ) ;
+ //       // if( isOperator(&line[counter])  )   counter++;
+ //       
+ //       //判断结尾是否为数字
+	//	 //if(line[counter]>47 && line[counter]<58)
+	//	 //	lastch = TRUE;
+	//	 //else if(line[counter]!='\n' && line[counter]!=' ' && line[counter] != '(' && line[counter] != ')')
+	//	 //	lastch = FALSE;
+ //        counter++;
+ //   }while(line[counter] != '\0');
 //括号数量错误
 	// if(spesym == 0){printf("%s", line);printf("Wrong expression\n");return 0;}
 	// if(lastch == FALSE){printf("%s", line);printf("Wrong expression\n");return 0;}
