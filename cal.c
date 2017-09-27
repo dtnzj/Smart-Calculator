@@ -100,7 +100,7 @@ char const* GetErrorString(error_t error)
 
 void ReportError(error_t error)
 {
-  printf("%s", GetErrorString(error));
+  printf("%s\n", GetErrorString(error));
 //   return error;
 }
 
@@ -366,7 +366,7 @@ void Polish (char const*s, char *output, error_t* error)
     char *stack = NULL;
     char *expr_in = NULL;
     
-    len = 2*strlen(s) * sizeof(char);
+    len = 4*strlen(s) * sizeof(char);
     stack = (char*)malloc(len );
     expr_in = (char*)malloc( len);
     memset(stack,   '\0',len-1);
@@ -476,10 +476,10 @@ double Calculate(char const* expr_in, error_t* error)
     char *expr= NULL;
     double *cSt = NULL;
     
-    len[0] = 2 * strlen(expr_in) * sizeof(char);
+    len[0] = 4 * strlen(expr_in) * sizeof(char);
     expr= (char*)malloc( len[0] );
     
-    len[1] = 2 * strlen(expr_in) * sizeof(double);
+    len[1] = 4 * strlen(expr_in) * sizeof(double);
     cSt = (double*)malloc( len[1] );   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     
     // no memory error test 
@@ -492,7 +492,7 @@ double Calculate(char const* expr_in, error_t* error)
         return 0;
     }
     memset(expr,'\0',len[0]-1);
-    memset(cSt,'\0',len[1]-1);
+    memset(cSt, 0, len[1]-1);
     
     
     Polish (expr_in, expr, error);
@@ -566,67 +566,88 @@ double Calculate(char const* expr_in, error_t* error)
 // 输出：		返回动态分配后字符串首地址
 char* ReadLine(FILE* in)
 {
-	char* line = NULL;
-	char *q;
-	int s = 1, t = 2 * sizeof(char);
-	line = malloc(t);
+    char* line = (char*)malloc(2*sizeof(char));
+    int temp;
+    int len = 0;
 
-	if (line == NULL)
-	{
-		printf("ERROR: Not enough memory");
-		return NULL;
-	}
-	if ((line[0] = (char)fgetc(in)) == EOF)
-	{
-		free(line);
-		return NULL;
-	}
-	if (line[0] == '\n')
-	{
-		line[0] = 0;
-		return line;
-	}
-	while (((line[s] = (char)fgetc(in)) != '\n') && (line[s] != EOF))
-	{
-		t += sizeof(char);
-		q = realloc(line, t);
-		if (q == NULL)
-		{
-			free(line);
-			printf("ERROR: Not enough memory");
-			return NULL;
-		}
-		line = q;
-		s++;
-	}
-	if (line[s] == EOF)
-		fseek(in, ftell(in) - 1, SEEK_END);
-	line[s] = 0;
-	return line;
+    if(line == NULL)
+    {
+        printf("ERROR: Memory Not Enough \n");
+        free(line);
+        return NULL;
+    }
+
+    do
+    {
+        temp= fgetc(in);
+
+        //考虑如果读到文件结尾后，在进行一次读写会不会出问题
+        if(temp == EOF || temp == 26)
+        {
+            //遇到的文件为空文件
+            if(len == 0)
+            {
+                if(line != NULL)
+                    free(line);
+                return NULL;//这种情况可以直接结束返回
+            }
+            else
+            {
+                Statut_File = END_FILE;//将结尾换成换行符，并更改状态，执行完赋值操作，然后结束返回
+                temp = '\n';
+            }
+        }
+        //插入到字符串操作
+        
+        {
+            line[len] = (char)temp;
+            len++;
+            line =(char*)realloc(line, ((len)+1)*sizeof(char));
+            if(line == NULL)
+            {
+                printf("ERROR: Memory Not Enough \n");
+                free(line);
+                return NULL;
+            }
+        }
+        
+    }while(temp != '\n');
+    
+    // line[len-1] = 0;
+    line[len-1] = '\0';
+    return line;
+ 
 }
 
 // 功能： 初步判断计算需要
 // 输入：line: 字符串
 // 		len：字符串长度 
 // 输出：是否需要计算
-#define SPESYMmax 8
-char spesym[SPESYMmax] ={'\0','\n','\t','\r','\a','\b','\v','\f'};
+#define SPESYMmax 7
+char spesym[SPESYMmax] ={'\0','\n','\r','\a','\b','\v','\f'};
 int NeedCalculate(char const* line)
 {
-	// TODO: Determine if the line contains an expression 
-	int i, s = 0, length;
-	length = strlen(line);//StrLength(line); 
-	while ((s <= length) && isspace(line[s]))
-		s++;
-	if ((line[s] == 0) || ((line[s] == '/') && (line[s + 1] == '/')))
-		return 0;
-	for (i = s; i < length; i++)
+	int counter = 0, i = 0, len =0;
+	//char lastch = TRUE;
+    len = strlen(line);
+    // remove the spaces
+    while((line[counter] == ' ' || line[counter] == '\t') && counter<= len)
+        counter++; 
+    
+    for ( i = 0; i < SPESYMmax; i++)
+        if(line[counter] == spesym[i])//空行
+        {  
+            // printf("%s", line);        
+            return 0;
+        }
+    if(line[counter] == '/' && line[counter+1] == '/')//注释行
 	{
-		if (!IS_SYMBOL(line[i]))
-			return 2;
-	}
-	return 1;
+		// printf("%s", line);
+		return 0;
+	}	
+    return 1;
 }
+
 
 void ProcessLine(char const* line)
 {
@@ -634,9 +655,16 @@ void ProcessLine(char const* line)
     error_t lastError = ERR_OK;
     // error_t *lastError_t = &lastError;
 	int i = 0;
-	
-	char *expr_in = (char*)malloc( 2*strlen(line) * sizeof(char));
-	 // no memory error test 
+    char *expr_in = NULL;
+    
+    if (!NeedCalculate(line))
+    {
+      puts(line);
+      return;
+    }
+    
+    expr_in = (char*)malloc( 2*strlen(line) * sizeof(char));
+    // no memory error test 
     if (expr_in == NULL )
     {
         lastError = ERR_NOT_ENOUGH_MEMORY;    
@@ -644,25 +672,19 @@ void ProcessLine(char const* line)
         free(expr_in);
         return;
     }
-    strcpy(expr_in,line);
 
-
-	i = strlen(expr_in);
-	expr_in[i -1] = '\0';
+    // strcpy(expr_in,line);
+    // i = strlen(expr_in);
+	// expr_in[i -1] = '\0';
 
     
-    printf("%s", expr_in);        
-    if(NeedCalculate(expr_in))
-    {
-        result = Calculate(line, &lastError);
-        printf(" == ");    
-        if (lastError == ERR_OK)
-            printf("%lg", result);   
-        else
-            ReportError(lastError);
-    }
-    printf("\n");    
-    free(expr_in); //这里有问题需要解决
+    printf("%s == ", line);
+    result = Calculate(line, &lastError);
+    if (lastError == ERR_OK)
+        printf("%lg\n", result);
+    else
+        ReportError(lastError);
+    // free(expr_in); //这里有问题需要解决
 
 }
 
@@ -672,8 +694,8 @@ int main(int argc, char const* argv[])
     char* line = NULL;
 
     //Private part
-    int len = 0;
-    int* len_p = &len;
+    // int len = 0;
+    // int* len_p = &len;
     
 
     // Choose an input source
@@ -685,17 +707,22 @@ int main(int argc, char const* argv[])
     }
 
     // Process the data line by line
-    while ((line = ReadLine(in, len_p)) != NULL || Statut_File == END_FILE)
+    while (Statut_File == NORMAL && (line = ReadLine(in)) != NULL )
     {
-        
         ProcessLine(line);
         free(line);
     }
+  
+    // while (((line = ReadLine(in, len_p)) != NULL) && Statut_File == NORMAL)
+    // {
+	// 	if(NeedCalculate(line))
+	// 		ProcessLine(line);
+	// 	free(line);
+    // }
     //结尾处最后一行的处理
-    //  if(Statut_File == END_FILE)
-    //     if(NeedCalculate(line))
-    //         ProcessLine(line);
-    //  free(line);
+    // if(Statut_File == END_FILE)
+    //     ProcessLine(line);
+    // free(line);
 
     // Clean up
     if (in != stdin)
