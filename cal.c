@@ -469,7 +469,7 @@ double Calculate(char const* expr_in, error_t* error)
 	// TODO: Replace with a computational algorithm subdivided into modules/functions
     unsigned int top=0,i=0,len[2] = {0,0}; 
     // char *expr= (char*)malloc(2*strlen(expr_in) * sizeof(char));
-	char dst[20] = {0};
+	char dst[40] = {0};
 	char flag = FALSE;
     // double *cSt = (double*)malloc( 2*sizeof(double)*strlen(expr_in));   	//波兰式需要用两个栈，逆波兰式只需要一个栈  
     
@@ -654,8 +654,6 @@ void ProcessLine(char const* line)
     double result = 0;
     error_t lastError = ERR_OK;
     // error_t *lastError_t = &lastError;
-	int i = 0;
-    char *expr_in = NULL;
     
     if (!NeedCalculate(line))
     {
@@ -663,15 +661,7 @@ void ProcessLine(char const* line)
       return;
     }
     
-    expr_in = (char*)malloc( 2*strlen(line) * sizeof(char));
-    // no memory error test 
-    if (expr_in == NULL )
-    {
-        lastError = ERR_NOT_ENOUGH_MEMORY;    
-        ReportError(lastError);
-        free(expr_in);
-        return;
-    }
+
 
     // strcpy(expr_in,line);
     // i = strlen(expr_in);
@@ -730,3 +720,5 @@ int main(int argc, char const* argv[])
 	//getchar();
     return 0;
 }
+
+
