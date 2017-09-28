@@ -59,6 +59,8 @@ typedef enum
   ERR_DIV_BY_ZERO,
   ERR_INCORRECT_PARAMETERS,
   ERR_TOO_MANY_PARAMETERS,
+  ERR_NOT_NUMBER_RESULT,
+  ERR_INFINIT_RESULT,
   ERR_OTHER,            // add this statue to represent all other error that we didn't give
   
   // TODO: Add your own error codes
@@ -88,6 +90,12 @@ char const* GetErrorString(error_t error)
             break;
         case ERR_TOO_MANY_PARAMETERS:    
             errorStr = "ERROR: ERR_TOO_MANY_PARAMETERS";
+            break;
+        case ERR_NOT_NUMBER_RESULT:
+            errorStr = "ERROR: ERR_NOT_NUMBER_RESULT";
+            break;
+        case ERR_INFINIT_RESULT:
+            errorStr = "ERROR: ERR_INFINIT_RESULT";
             break;
         case ERR_OTHER:
         default:
@@ -550,6 +558,8 @@ double Calculate(char const* expr_in, error_t* error)
     if (top >1)  *error = ERR_TOO_MANY_PARAMETERS;
 	if(flag == FALSE) *error = ERR_WRONG_EXPRESSION;
     result = cSt[1];
+    if( isnan(result) ) *error = ERR_NOT_NUMBER_RESULT;
+    if( isinf(result) ) *error = ERR_INFINIT_RESULT;
     free(cSt);
     cSt = NULL;
     free(expr);
