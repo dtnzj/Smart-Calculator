@@ -154,6 +154,7 @@ int isDigit(char *op)
 {
     return  ((*op =='.'&&isNumber( op+1 ))      //小数，且点号后面有数字
 			|| ((*op =='e') && isNumber(op+1))  //数字
+            || ((*op =='e') && ((*(op+1) =='-') || (*(op+1) =='~')) && isNumber(op+2))  //负指数数字
             || isNumber( op )                   //数字
             || isConstantNum( op )              //数学常数: 自然对数e 以及圆周率pi
             );
@@ -404,13 +405,19 @@ void Polish (char const*s, char *output, error_t* error)
 		// 	return ;
 		// }
 		//printf("\ntop = %d", top);
-		if (isDigit(expr_in+i))              
+		if (isDigit(expr_in+i))
         {
             output[outLen++] = *(expr_in+i);        //3）假如是操作数，把它添加到输出串中。  
             while( *(expr_in+i+1) !='\0' && isDigit( expr_in+i +1 ))
             {  
                 output[outLen++] = *( expr_in+i+1 );  
-                ++i;  
+                ++i;
+                if (*( expr_in+i ) == 'e' && *( expr_in+i+1 ) == '-')
+                {
+                    output[outLen++] = *( expr_in+i+1 );  
+                    ++i;
+                }
+
             }  
             output[outLen++] = ' ';     //空格隔开  
         }
