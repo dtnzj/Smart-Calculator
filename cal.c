@@ -170,6 +170,10 @@ int isOperator(char op)
     return (op=='+' || op=='-' || op=='*' || op=='/' || op=='^');  
 }  
 
+int isInt(double op)  // 字母
+{
+    return ( op == (int)op );
+}
 //在此定义了改程序支持的所有数学函数，及其代号
 #define FUNMAX 20   //程序支持的所有数学函数个数
 typedef struct
@@ -231,7 +235,6 @@ void fun2sym(char *expr, error_t *error)
 {
     int tmp ;
     int i;
-    strlwrt(expr);  // 将字符串中所有字母转换为小写字母
     while (*expr)
     {
         tmp = isFunction(expr)-1;
@@ -370,7 +373,7 @@ void minus2negative(char *expr)
 void Polish (char const*s, char *output, error_t* error)
 {  
     unsigned int outLen = 0,i=0,len = 0;  
-    unsigned int top = 0;           //stack count
+    unsigned int top = 0,flag_e = 0;           //stack count
 
     char *stack = NULL;
     char *expr_in = NULL;
@@ -391,6 +394,7 @@ void Polish (char const*s, char *output, error_t* error)
         return;
     }
     strcpy(expr_in,s);
+    strlwrt(expr_in);  // 将字符串中所有字母转换为小写字母
     minus2negative(expr_in);
     fun2sym(expr_in, error);
     
@@ -407,18 +411,23 @@ void Polish (char const*s, char *output, error_t* error)
 		//printf("\ntop = %d", top);
 		if (isDigit(expr_in+i))
         {
+            flag_e = 0;
             output[outLen++] = *(expr_in+i);        //3）假如是操作数，把它添加到输出串中。  
             while( *(expr_in+i+1) !='\0' && isDigit( expr_in+i +1 ))
             {  
                 output[outLen++] = *( expr_in+i+1 );  
                 ++i;
-                if (*( expr_in+i ) == 'e' && *( expr_in+i+1 ) == '-')
+                if (*( expr_in+i ) == 'e' )
                 {
-                    output[outLen++] = *( expr_in+i+1 );  
-                    ++i;
+                    flag_e = 1;
+                    if ( *( expr_in+i+1 ) == '-' )
+                    {
+                        output[outLen++] = *( expr_in+i+1 );  
+                        ++i;
+                    }
                 }
-
-            }  
+                if ( flag_e ==1 && *( expr_in+i+1 ) =='.' )  *error = ERR_INCORRECT_PARAMETERS;
+            }
             output[outLen++] = ' ';     //空格隔开  
         }
         if (*(expr_in+i)=='(' || isSymFunction(*(expr_in+i)) || *(expr_in+i) == '~')   //4）假如是闭括号，将它压栈。  
@@ -562,11 +571,14 @@ double Calculate(char const* expr_in, error_t* error)
         ++i;  
 	}
     // printf ("top == %d",top);
-    if (top >1)  *error = ERR_TOO_MANY_PARAMETERS;
-	if(flag == FALSE) *error = ERR_WRONG_EXPRESSION;
     result = cSt[1];
-    if( isnan(result) ) *error = ERR_NOT_NUMBER_RESULT;
-    if( isinf(result) ) *error = ERR_INFINIT_RESULT;
+    if ( *error == ERR_OK)
+    {
+        if (top >1)  *error = ERR_TOO_MANY_PARAMETERS;
+        if(flag == FALSE) *error = ERR_WRONG_EXPRESSION;
+        if( isnan(result) ) *error = ERR_NOT_NUMBER_RESULT;
+        if( isinf(result) ) *error = ERR_INFINIT_RESULT;
+    }
     free(cSt);
     cSt = NULL;
     free(expr);

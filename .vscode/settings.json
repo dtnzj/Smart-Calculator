@@ -4,6 +4,8 @@
         "cmath": "c",
         "math.h": "c",
         "typeinfo": "c",
-        "ctype.h": "c"
+        "ctype.h": "c",
+        "stdio.h": "c",
+        "string.h": "c"
     }
 }
