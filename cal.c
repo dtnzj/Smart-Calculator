@@ -118,7 +118,6 @@ void ReportError(error_t error)
 int isFunction(char* op);
 int isSymFunction(char op);
 
-//判断运算符级别函数；其中* /的级别为2，+ -的级别为1；  
 // 此处如果返回0 应当报错
 int priority(char op)               
 {  
@@ -126,12 +125,12 @@ int priority(char op)
         return 1;  
     if (op=='*' || op=='/')  
         return 2;  
+    if (op== '~')  
+        return 3;  
     if (op == '^')
-		return 3;
+		return 4;
     if (isSymFunction(op))
-        return 4;
-    if (op == '~')
-		return 5;
+        return 5;
     else  
         return 0;  
 }  
@@ -167,7 +166,7 @@ int isAlphabet(char op)  // 字母
 //判断输入串中的字符是不是操作符，如果是返回 1 
 int isOperator(char op)                
 {  
-    return (op=='+' || op=='-' || op=='*' || op=='/' || op=='^');  
+    return (op=='+' || op=='-' || op=='*' || op=='/' || op=='^' );  
 }  
 
 int isInt(double op)  // 字母
@@ -403,12 +402,6 @@ void Polish (char const*s, char *output, error_t* error)
     
     while(*(expr_in+i))               //1）  
     {  
-		// if(outLen >=len || top >= len)
-		// {
-		// 	*error = ERR_NOT_ENOUGH_MEMORY;
-		// 	return ;
-		// }
-		//printf("\ntop = %d", top);
 		if (isDigit(expr_in+i))
         {
             flag_e = 0;
@@ -430,14 +423,20 @@ void Polish (char const*s, char *output, error_t* error)
             }
             output[outLen++] = ' ';     //空格隔开  
         }
-        if (*(expr_in+i)=='(' || isSymFunction(*(expr_in+i)) || *(expr_in+i) == '~')   //4）假如是闭括号，将它压栈。  
+        if (*(expr_in+i)=='(' || isSymFunction(*(expr_in+i)) )   //4）假如是闭括号，将它压栈。  
         {  
             ++top;  
             stack[top] = *(expr_in+i);  
         }  
-        while (isOperator(*(expr_in+i)) )        //5)如果是运算符，执行算法对应操作；  
+        while (isOperator(*(expr_in+i)) || *(expr_in+i)=='~' )        //5)如果是运算符，执行算法对应操作；  
         {  
-            if (top==0 || stack[top]=='(' || priority(*(expr_in+i)) > priority( *(stack+top))) //空栈||或者栈顶为)||新来的元素优先级更高  
+            if ( *(expr_in+i)=='~' && *(stack+top) == '~')
+            {
+                ++top;
+                stack[top] = *(expr_in+i);
+                break;
+            }
+            else if (top==0 || stack[top]=='(' || priority(*(expr_in+i)) > priority( *(stack+top))) //空栈||或者栈顶为)||新来的元素优先级更高  
             {  
                 ++top;  
                 stack[top] = *(expr_in+i);  
